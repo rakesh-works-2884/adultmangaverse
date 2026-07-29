@@ -12,12 +12,14 @@ import {
   Settings,
   FolderArchive,
   Newspaper,
+  DollarSign,
 } from "lucide-react";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/admin/SignOutButton";
 
 const adminNav = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Revenue", href: "/admin/revenue", icon: DollarSign },
   { label: "Manga", href: "/admin/manga", icon: BookText },
   { label: "Bulk Import", href: "/admin/import", icon: FolderArchive },
   { label: "Chapters", href: "/admin/chapters", icon: Layers },

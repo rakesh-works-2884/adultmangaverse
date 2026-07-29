@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { CloudCheck, Loader2, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveOffline, removeOffline } from "@/actions/offline";
@@ -15,23 +16,22 @@ function subscribe(cb: () => void) {
 
 export function OfflineButton({
   mangaId,
-  isLoggedIn,
   tier,
   limit,
   used,
 }: {
   mangaId: string;
-  isLoggedIn: boolean;
   tier: string;
   limit: number | null;
   used: number;
 }) {
+  const { status } = useSession();
   const saved = useSyncExternalStore(subscribe, () => isSavedOffline(mangaId), () => false);
   const [pending, startTransition] = useTransition();
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isLoggedIn) {
+  if (status !== "authenticated") {
     return (
       <Link href="/login" className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface px-5 font-ui text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
         <WifiOff className="size-4" /> Save Offline

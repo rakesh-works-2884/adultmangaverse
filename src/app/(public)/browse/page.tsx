@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { cardSelect, buildMangaWhere, buildOrderBy } from "@/lib/catalog";
+import { cardSelect, buildMangaWhere, buildOrderBy, getGenresList } from "@/lib/catalog";
 import { MangaCard } from "@/components/public/MangaCard";
 import { BrowseFilters } from "@/components/public/BrowseFilters";
 import { MANGA_STATUSES, MANGA_TYPES, CONTENT_INTENSITIES } from "@/lib/validators";
@@ -48,7 +48,10 @@ export default async function BrowsePage({
       take: PAGE_SIZE,
       select: cardSelect,
     }),
-    prisma.genre.findMany({ orderBy: { name: "asc" }, select: { slug: true, name: true } }),
+    // Cached (5 min, tag-invalidated on admin genre CRUD) — the header nav
+    // already pays for this fetch once per request; reuse it instead of a
+    // second fresh query for the exact same data.
+    getGenresList(),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));

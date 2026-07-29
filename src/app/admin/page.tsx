@@ -1,19 +1,22 @@
 import Link from "next/link";
 import { formatDistanceToNowStrict } from "date-fns";
-import { BookText, Eye, Layers, MessageSquare, Users } from "lucide-react";
+import { BookText, DollarSign, Eye, Layers, MessageSquare, Users } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
 export default async function AdminDashboardPage() {
   const session = await auth();
-  const [mangaCount, chapterCount, userCount, pendingCount, viewsAgg, latestComments, recentUsers] = await Promise.all([
+  const [mangaCount, chapterCount, userCount, pendingCount, viewsAgg, revenueAgg, latestComments, recentUsers] = await Promise.all([
     prisma.manga.count(),
     prisma.chapter.count(),
     prisma.user.count(),
     prisma.comment.count({ where: { status: "PENDING" } }),
     prisma.manga.aggregate({ _sum: { views: true } }),
+    prisma.payment.aggregate({ where: { status: "finished" }, _sum: { amountUsd: true } }),
     prisma.comment.findMany({
       orderBy: { createdAt: "desc" },
       take: 6,
@@ -23,6 +26,7 @@ export default async function AdminDashboardPage() {
   ]);
 
   const stats = [
+    { label: "Revenue", value: usd.format(Number(revenueAgg._sum.amountUsd ?? 0)), icon: DollarSign, href: "/admin/revenue" },
     { label: "Manga", value: mangaCount, icon: BookText, href: "/admin/manga" },
     { label: "Chapters", value: chapterCount, icon: Layers, href: "/admin/manga" },
     { label: "Users", value: userCount, icon: Users, href: "/admin/users" },
@@ -36,7 +40,7 @@ export default async function AdminDashboardPage() {
         <p className="mt-1 flex items-center gap-1.5 text-sm text-text-muted"><Eye className="size-4" /> {(viewsAgg._sum.views ?? 0).toLocaleString()} total views across all titles</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map(({ label, value, icon: Icon, href }) => (
           <Link key={label} href={href} className="rounded-xl border border-border bg-surface p-5 transition-colors hover:border-primary/50">
             <div className="flex items-center justify-between">

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Loader2, MessageCircle } from "lucide-react";
 import { postComment } from "@/actions/comments";
@@ -15,13 +16,13 @@ export type PublicComment = {
 
 export function CommentsSection({
   mangaId,
-  isLoggedIn,
   comments,
 }: {
   mangaId: string;
-  isLoggedIn: boolean;
   comments: PublicComment[];
 }) {
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [posted, setPosted] = useState(false);

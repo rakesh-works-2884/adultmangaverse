@@ -5,23 +5,26 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
 import { BookOpen, ExternalLink, Eye, Layers, MessageSquare, TriangleAlert } from "lucide-react";
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
 import { cardSelect } from "@/lib/catalog";
 import { IntensityBadge } from "@/components/public/IntensityBadge";
 import { MangaCard } from "@/components/public/MangaCard";
 import { Stars } from "@/components/public/Stars";
 import { ViewCounter } from "@/components/public/ViewCounter";
 import { ReviewForm } from "@/components/public/ReviewForm";
-import { ContinueReadingButton } from "@/components/public/ContinueReadingButton";
-import { BookmarkButton } from "@/components/public/BookmarkButton";
-import { OfflineButton } from "@/components/public/OfflineButton";
+import { MangaActionsPanel } from "@/components/public/MangaActionsPanel";
 import { CommentsSection } from "@/components/public/CommentsSection";
 import { buildMetadata, mangaJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import { StructuredData } from "@/components/seo/StructuredData";
 import { stripHtml } from "@/lib/utils";
-import { getOfflineUsage } from "@/actions/offline";
 
-export const dynamic = "force-dynamic";
+// No auth() here anymore — continue-reading/bookmark/offline-save state is
+// fetched client-side (see MangaActionsPanel), so this page has no
+// session/dynamic-API dependency and can be cached instead of fully
+// re-rendering on every request.
+export const revalidate = 60;
+export async function generateStaticParams() {
+  return [];
+}
 
 // generateMetadata and the page body both need this manga — React's cache()
 // dedupes identical calls within one request, so this only hits the DB once
@@ -64,7 +67,7 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const now = new Date();
 
-  const [session, manga] = await Promise.all([auth(), getMangaDetail(slug)]);
+  const manga = await getMangaDetail(slug);
 
   if (!manga) {
     // Honor a renamed slug with a permanent (308) redirect (Rules §5).
@@ -79,30 +82,11 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ sl
   const chapters = manga.chapters;
   const firstChapter = chapters.length ? chapters[chapters.length - 1] : null;
 
-  // Everything below only depends on `manga` (already resolved) — session-
-  // scoped lookups, comments, and related titles are all independent of
-  // each other, so run them as one parallel batch instead of three
-  // sequential round trips.
+  // Comments and related titles are both independent of each other and of
+  // any session — run them in parallel.
   const genreSlugs = manga.genres.map((g) => g.slug);
 
-  const [sessionData, comments, related] = await Promise.all([
-    session
-      ? Promise.all([
-          prisma.readProgress.findUnique({
-            where: { userId_mangaId: { userId: session.user.id, mangaId: manga.id } },
-            select: { chapter: { select: { number: true } } },
-          }),
-          prisma.review.findUnique({
-            where: { mangaId_userId: { mangaId: manga.id, userId: session.user.id } },
-            select: { rating: true, body: true },
-          }),
-          prisma.bookmark.findUnique({
-            where: { userId_mangaId: { userId: session.user.id, mangaId: manga.id } },
-            select: { id: true },
-          }),
-          getOfflineUsage(),
-        ])
-      : Promise.resolve([null, null, null, null] as const),
+  const [comments, related] = await Promise.all([
     prisma.comment.findMany({
       where: { mangaId: manga.id, status: "APPROVED" },
       orderBy: { createdAt: "desc" },
@@ -118,11 +102,6 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ sl
         })
       : Promise.resolve([]),
   ]);
-
-  const [prog, rev, bm, offlineUsage] = sessionData;
-  const serverContinue = prog ? prog.chapter.number.toString() : null;
-  const myReview = rev;
-  const isBookmarked = !!bm;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -188,17 +167,7 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ sl
                 <BookOpen className="size-4" strokeWidth={2} /> Start Reading
               </Link>
             ) : <span className="text-sm text-text-muted">No chapters published yet.</span>}
-            {session && serverContinue ? (
-              <Link href={`/manga/${manga.slug}/${serverContinue}`} className="btn-3d-outline inline-flex h-11 items-center gap-2 rounded-lg border border-primary/40 px-5 font-ui text-sm font-semibold text-primary hover:bg-primary/10">Continue Ch. {serverContinue}</Link>
-            ) : !session ? <ContinueReadingButton slug={manga.slug} /> : null}
-            <BookmarkButton mangaId={manga.id} initialBookmarked={isBookmarked} isLoggedIn={!!session} />
-            <OfflineButton
-              mangaId={manga.id}
-              isLoggedIn={!!session}
-              tier={offlineUsage?.tier ?? "FREE"}
-              limit={offlineUsage ? offlineUsage.limit : 0}
-              used={offlineUsage?.used ?? 0}
-            />
+            <MangaActionsPanel mangaId={manga.id} mangaSlug={manga.slug} />
           </div>
         </div>
       </div>
@@ -262,7 +231,7 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ sl
       {/* Reviews */}
       <section className="mt-8">
         <h2 className="mb-3 flex items-center gap-2 font-heading text-lg font-semibold"><MessageSquare className="size-5 text-primary" /> Reviews ({manga._count.reviews})</h2>
-        <div className="mb-4"><ReviewForm mangaId={manga.id} isLoggedIn={!!session} existing={myReview} /></div>
+        <div className="mb-4"><ReviewForm mangaId={manga.id} /></div>
         {manga.reviews.length === 0 ? (
           <p className="text-sm text-text-muted">No reviews yet. Be the first.</p>
         ) : (
@@ -283,7 +252,6 @@ export default async function MangaDetailPage({ params }: { params: Promise<{ sl
       {/* Comments */}
       <CommentsSection
         mangaId={manga.id}
-        isLoggedIn={!!session}
         comments={comments.map((c) => ({ id: c.id, body: c.body, createdAt: c.createdAt.toISOString(), userName: c.user.name }))}
       />
 

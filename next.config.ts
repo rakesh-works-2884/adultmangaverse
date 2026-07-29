@@ -20,12 +20,16 @@ const nextConfig: NextConfig = {
   // requires it normally at runtime. Same for the Prisma driver adapter.
   serverExternalPackages: ["sharp", "@prisma/adapter-pg", "@napi-rs/canvas", "pdf-to-img", "pdfjs-dist"],
   images: { remotePatterns: r2RemotePatterns() },
-  // Uploads go through Server Actions: images ≤10MB, and chapter PDFs can be
-  // larger, so raise the default 1MB Server Action body limit.
   experimental: {
+    // Uploads go through Server Actions: images ≤10MB, and chapter PDFs can
+    // be larger, so raise the default 1MB Server Action body limit.
     serverActions: {
       bodySizeLimit: "25mb",
     },
+    // Per-icon/per-function imports instead of pulling in the whole barrel
+    // file — smaller client JS, which matters most on mobile (parse/exec
+    // time, not just download).
+    optimizePackageImports: ["lucide-react", "date-fns"],
   },
   async headers() {
     return [

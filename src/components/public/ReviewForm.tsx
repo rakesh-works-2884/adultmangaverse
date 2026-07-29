@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Loader2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { submitReview } from "@/actions/reviews";
+import { getMyReview } from "@/actions/manga-user";
 
-export function ReviewForm({
-  mangaId,
-  isLoggedIn,
-  existing,
-}: {
-  mangaId: string;
-  isLoggedIn: boolean;
-  existing?: { rating: number; body: string } | null;
-}) {
+type Existing = { rating: number; body: string } | null;
+
+/** The actual interactive form — only mounted once `existing` is known, so its
+ * rating/body state seeds from the real value instead of a stale default. */
+function ReviewFormFields({ mangaId, existing }: { mangaId: string; existing: Existing }) {
   const router = useRouter();
   const [rating, setRating] = useState(existing?.rating ?? 0);
   const [hover, setHover] = useState(0);
@@ -23,14 +21,6 @@ export function ReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, startTransition] = useTransition();
-
-  if (!isLoggedIn) {
-    return (
-      <p className="rounded-lg border border-border bg-bg-soft px-4 py-3 text-sm text-text-muted">
-        <Link href="/login" className="font-medium text-highlight hover:underline">Sign in</Link> to rate and review this title.
-      </p>
-    );
-  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,4 +63,44 @@ export function ReviewForm({
       </button>
     </form>
   );
+}
+
+/**
+ * Fetches the current user's existing review client-side (instead of the
+ * manga detail page fetching it server-side via auth()) so that page can be
+ * cached — see getMyReview in actions/manga-user.ts.
+ */
+export function ReviewForm({ mangaId }: { mangaId: string }) {
+  const { status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  const [existing, setExisting] = useState<Existing>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    let cancelled = false;
+    const task = isLoggedIn ? getMyReview(mangaId) : Promise.resolve(null);
+    task.then((r) => {
+      if (cancelled) return;
+      setExisting(r);
+      setLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mangaId, isLoggedIn, status]);
+
+  if (status === "loading" || !loaded) {
+    return <div className="h-[126px] animate-pulse rounded-xl border border-border bg-surface" />;
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <p className="rounded-lg border border-border bg-bg-soft px-4 py-3 text-sm text-text-muted">
+        <Link href="/login" className="font-medium text-highlight hover:underline">Sign in</Link> to rate and review this title.
+      </p>
+    );
+  }
+
+  return <ReviewFormFields mangaId={mangaId} existing={existing} />;
 }

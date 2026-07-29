@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toggleBookmark } from "@/actions/bookmarks";
@@ -9,16 +10,15 @@ import { toggleBookmark } from "@/actions/bookmarks";
 export function BookmarkButton({
   mangaId,
   initialBookmarked,
-  isLoggedIn,
 }: {
   mangaId: string;
   initialBookmarked: boolean;
-  isLoggedIn: boolean;
 }) {
+  const { status } = useSession();
   const [bookmarked, setBookmarked] = useState(initialBookmarked);
   const [pending, startTransition] = useTransition();
 
-  if (!isLoggedIn) {
+  if (status !== "authenticated") {
     return (
       <Link href="/login" className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface px-5 font-ui text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover">
         <Bookmark className="size-4" /> Add to Library

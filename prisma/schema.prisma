@@ -114,6 +114,11 @@ model Manga {
   @@index([views])
   @@index([updatedAt])
   @@index([createdAt])
+  // Trigram GIN indexes so ILIKE '%q%' title/author search (used by
+  // /search, /browse, /api/search, admin manga search) can use an index
+  // instead of a sequential scan — see the add_search_trigram_index migration.
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "Manga_title_trgm_idx")
+  @@index([author(ops: raw("gin_trgm_ops"))], type: Gin, map: "Manga_author_trgm_idx")
 }
 
 model Genre {
