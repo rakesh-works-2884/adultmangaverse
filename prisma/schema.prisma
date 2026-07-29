@@ -1,0 +1,312 @@
+// MangaBlue — Prisma schema
+// Docs: https://pris.ly/d/prisma-schema
+// Phase 1: full data model + first migration.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  MOD
+  ADMIN
+}
+
+enum MangaStatus {
+  ONGOING
+  COMPLETED
+  HIATUS
+}
+
+enum MangaType {
+  MANGA
+  MANHWA
+  MANHUA
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  SPAM
+}
+
+enum ContentIntensity {
+  MODERATE
+  HIGH
+  VERY_HIGH
+  EXTREME
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  VIP
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  passwordHash String
+  name         String?
+  role         Role             @default(USER)
+  banned       Boolean          @default(false)
+  tier         SubscriptionTier @default(FREE)
+  tierUntil    DateTime?
+  createdAt    DateTime         @default(now())
+
+  bookmarks    Bookmark[]
+  progress     ReadProgress[]
+  comments     Comment[]
+  reviews      Review[]
+  offlineSaves OfflineSave[]
+  payments     Payment[]
+
+  @@index([role])
+}
+
+model Manga {
+  id             String      @id @default(cuid())
+  title          String
+  slug           String      @unique
+  altTitles      String[]    @default([])
+  synopsis       String? // sanitized HTML (TipTap) — sanitized before save
+  coverUrl       String?
+  author         String?
+  authorLink     String? // official author/publisher page — credit & support
+  artist         String?
+  status         MangaStatus      @default(ONGOING)
+  type           MangaType        @default(MANGA)
+  intensity      ContentIntensity @default(MODERATE)
+  isPremium      Boolean          @default(false)
+  contentWarnings String[]        @default([])
+  releaseYear    Int?
+  rating         Float            @default(0)
+  ratingCount    Int              @default(0)
+  views          Int              @default(0)
+  featured       Boolean          @default(false)
+  featuredAt     DateTime? // when it became featured — FIFO order for the homepage carousel's 3-slot cap
+  heroImageDesktop String? // optional manual poster for the featured carousel, landscape/PC
+  heroImageMobile  String? // optional manual poster for the featured carousel, portrait/phone
+  published      Boolean          @default(false)
+  seoTitle       String?
+  seoDescription String?
+  ogImage        String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  genres       Genre[]        @relation("MangaGenres")
+  chapters     Chapter[]
+  bookmarks    Bookmark[]
+  progress     ReadProgress[]
+  comments     Comment[]
+  reviews      Review[]
+  offlineSaves OfflineSave[]
+
+  @@index([published, featured])
+  @@index([type, status])
+  @@index([intensity])
+  @@index([isPremium])
+  @@index([views])
+  @@index([updatedAt])
+  @@index([createdAt])
+}
+
+model Genre {
+  id    String  @id @default(cuid())
+  name  String  @unique
+  slug  String  @unique
+  manga Manga[] @relation("MangaGenres")
+}
+
+model Chapter {
+  id          String    @id @default(cuid())
+  mangaId     String
+  manga       Manga     @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  number      Decimal   @db.Decimal(8, 2)
+  title       String?
+  isPremium   Boolean   @default(false)
+  views       Int       @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  pages    Page[]
+  progress ReadProgress[]
+  comments Comment[]
+
+  @@unique([mangaId, number])
+  @@index([mangaId])
+  @@index([publishedAt])
+}
+
+model Page {
+  id        String  @id @default(cuid())
+  chapterId String
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  index     Int
+  imageUrl  String
+  width     Int
+  height    Int
+
+  @@unique([chapterId, index])
+  @@index([chapterId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mangaId   String
+  manga     Manga    @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mangaId])
+  @@index([userId])
+}
+
+model ReadProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mangaId   String
+  manga     Manga    @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, mangaId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mangaId   String?
+  manga     Manga?        @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  chapterId String?
+  chapter   Chapter?      @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  body      String
+  status    CommentStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+
+  @@index([mangaId, status])
+  @@index([chapterId, status])
+  @@index([status])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  mangaId   String
+  manga     Manga    @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int // 1..5
+  body      String
+  createdAt DateTime @default(now())
+
+  @@unique([mangaId, userId])
+  @@index([mangaId])
+}
+
+// Tracks which titles a Premium/VIP user has chosen for offline reading —
+// the server-side source of truth for the 50 (Premium) / unlimited (VIP)
+// limit. Actual page bytes are cached client-side (Service Worker + Cache
+// Storage); this table never stores image data.
+model OfflineSave {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mangaId   String
+  manga     Manga    @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mangaId])
+  @@index([userId])
+}
+
+// A crypto (NOWPayments) checkout attempt. Created in "waiting" state when
+// the user starts checkout; the IPN webhook updates status as the payment
+// progresses and, on "finished", extends the user's tier.
+model Payment {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider   String   @default("nowpayments")
+  orderId    String   @unique // our id, sent to NOWPayments as order_id — how the IPN maps back to this row
+  invoiceId  String? // NOWPayments' own invoice/payment id, filled in once created
+  tier       SubscriptionTier
+  months     Int
+  amountUsd  Decimal  @db.Decimal(10, 2)
+  status     String   @default("waiting") // waiting | confirming | confirmed | sending | partially_paid | finished | failed | refunded | expired
+  invoiceUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Short-lived email verification codes — used both for signup (verify the
+// address before an account is created) and password reset. Not tied to a
+// User row by FK since a SIGNUP code is issued before any account exists.
+model EmailOtp {
+  id         String    @id @default(cuid())
+  email      String
+  purpose    String // "SIGNUP" | "RESET"
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, purpose])
+}
+
+model StaticPage {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  title          String
+  contentHtml    String   @default("")
+  seoTitle       String?
+  seoDescription String?
+  updatedAt      DateTime @updatedAt
+}
+
+model Blog {
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  excerpt        String?
+  contentHtml    String    @default("")
+  coverImage     String?
+  author         String?
+  published      Boolean   @default(false)
+  publishedAt    DateTime?
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model SlugRedirect {
+  id        String   @id @default(cuid())
+  oldSlug   String
+  newSlug   String
+  entity    String // e.g. "manga"
+  createdAt DateTime @default(now())
+
+  @@unique([entity, oldSlug])
+  @@index([entity, oldSlug])
+}

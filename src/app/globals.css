@@ -1,26 +1,468 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Adult Manga Verse theme — 18+ dark navy + cyan (Design.md, from the
+  adult-content-platform-builder skill). Dark-only, so :root IS the dark theme.
+  shadcn semantic tokens map onto the brand palette; brand-only + content
+  intensity tokens are exposed as utilities via @theme.
+
+  NOTE: `--primary` is bright cyan, so text on it uses `--primary-foreground`
+  (dark navy). shadcn `--accent` is an interactive surface; the bright cyan
+  highlight is `highlight` (use `text-highlight`).
+*/
 
 @theme inline {
+  /* ── shadcn semantic tokens ── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ── brand tokens (Design.md) ── */
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-primary-hover: var(--primary-hover);
+  --color-highlight: var(--highlight);
+  --color-text: var(--foreground);
+  --color-text-muted: var(--muted-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-reader: var(--reader-bg);
+
+  /* ── content-intensity tokens ── */
+  --color-intensity-extreme: var(--intensity-extreme);
+  --color-intensity-very-high: var(--intensity-very-high);
+  --color-intensity-high: var(--intensity-high);
+  --color-intensity-moderate: var(--intensity-moderate);
+
+  /* ── fonts ── */
+  --font-sans: var(--font-roboto);
+  --font-heading: var(--font-montserrat);
+  --font-ui: var(--font-inter);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ── radii ── */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Brand palette — red & black */
+  --bg: #0a0a0c;
+  --bg-soft: #121216;
+  --surface: #1a1a20;
+  --surface-hover: #26262e;
+  --highlight: #ff6273;
+  --primary-hover: #c4162a;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --reader-bg: #000000;
+
+  /* content-intensity */
+  --intensity-extreme: #dc2626;
+  --intensity-very-high: #ea580c;
+  --intensity-high: #eab308;
+  --intensity-moderate: #16a34a;
+
+  /* shadcn semantic tokens → brand */
+  --background: var(--bg);
+  --foreground: #ececef;
+  --card: var(--surface);
+  --card-foreground: #ececef;
+  --popover: var(--surface);
+  --popover-foreground: #ececef;
+  --primary: #e11d2e;
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface);
+  --secondary-foreground: #ececef;
+  --muted: var(--bg-soft);
+  --muted-foreground: #9494a0;
+  --accent: var(--surface-hover);
+  --accent-foreground: #ececef;
+  --destructive: var(--danger);
+  --border: #2e2e38;
+  --input: #2e2e38;
+  --ring: #e11d2e;
+
+  /* chart scale — red family */
+  --chart-1: #e11d2e;
+  --chart-2: #f87171;
+  --chart-3: #fb7185;
+  --chart-4: #ef4444;
+  --chart-5: #f59e0b;
+
+  /* admin sidebar */
+  --sidebar: var(--bg-soft);
+  --sidebar-foreground: #ececef;
+  --sidebar-primary: #e11d2e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--surface-hover);
+  --sidebar-accent-foreground: #ececef;
+  --sidebar-border: #2e2e38;
+  --sidebar-ring: #e11d2e;
+
+  --radius: 0.625rem;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  /* Deter casual image saving/dragging (reader also blocks right-click). */
+  img {
+    -webkit-user-drag: none;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 35%, transparent);
+    color: var(--foreground);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Rendered rich text (TipTap output — admin editor + public synopsis). */
+.richtext {
+  line-height: 1.7;
+}
+.richtext :where(p) {
+  margin: 0.5rem 0;
+}
+.richtext :where(h2) {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+.richtext :where(h3) {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.4rem;
+}
+.richtext :where(h4) {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  margin: 0.6rem 0 0.3rem;
+}
+.richtext :where(ul) {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.richtext :where(ol) {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.richtext :where(a) {
+  color: var(--highlight);
+  text-decoration: underline;
+}
+.richtext :where(blockquote) {
+  border-left: 3px solid var(--primary);
+  padding-left: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0;
+}
+.richtext :where(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1rem 0;
+}
+
+/* Glass-shine: a diagonal light band that sweeps across an element. Respects
+   prefers-reduced-motion via the global rule below (animation-duration is
+   forced to ~0, so the band just never becomes visible). */
+@keyframes shine-sweep-loop {
+  from {
+    transform: translateX(-160%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(160%) skewX(-20deg);
+  }
+}
+
+.shine-surface {
+  position: relative;
+  overflow: hidden;
+}
+.shine-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(115deg, transparent 0%, rgb(255 255 255 / 0.22) 45%, rgb(255 255 255 / 0.05) 55%, transparent 100%);
+  transform: translateX(-160%) skewX(-20deg);
+  pointer-events: none;
+}
+
+/* Keeps sweeping on a loop for as long as you hover — for interactive tiles
+   like manga cards. linear + no hold segment in the keyframes = constant,
+   uninterrupted motion the whole time (no pause at either end). */
+.shine-hover::after {
+  transition: none;
+}
+.shine-hover:hover::after {
+  animation: shine-sweep-loop 2s linear infinite;
+}
+
+/* Continuous sweep for ambient/static panels — same deal, no pause. */
+.shine-auto::after {
+  animation: shine-sweep-loop 4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The shine sweep is a small, purely decorative light band — not the kind
+     of large-scale motion this rule exists to protect against — so it stays
+     animated even with reduce-motion on, instead of freezing mid-sweep. */
+  .shine-auto::after,
+  .shine-hover:hover::after {
+    animation-duration: 4s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .shine-hover:hover::after {
+    animation-duration: 2s !important;
+  }
+}
+
+/* ── Glassmorphism + glow ──────────────────────────────────────────
+   Shared vocabulary for "elevated/floating" surfaces (header, dropdowns,
+   modals) and for the ambient red glow that already shows up ad-hoc on
+   buttons/cards — pulled into reusable utilities instead of one-off
+   arbitrary-value shadows, so the depth reads as one consistent language
+   site-wide rather than a pile of unrelated effects. */
+
+/* Frosted, translucent surface — for anything that floats above content
+   (sticky header, dropdown menus, modals). Real backdrop-filter blur, so
+   it's reserved for small/occasional elements, not large scrolling grids. */
+.glass-panel {
+  background: color-mix(in oklab, var(--surface) 62%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid color-mix(in oklab, white 8%, transparent);
+}
+
+/* Resting ambient halo — a soft glow even without interaction, for hero art
+   and other single "hero" elements that should feel like a light source. */
+.glow-ring {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 25%, transparent),
+    0 0 32px -6px color-mix(in oklab, var(--primary) 45%, transparent);
+}
+
+/* Lift + tilt + intensifying glow on hover — cheap (no backdrop-filter), so
+   safe to use across a whole grid of cards/tiles. */
+.tilt-card {
+  transition:
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.35s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.tilt-card:hover {
+  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-4px) scale(1.015);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--primary) 45%, transparent),
+    0 20px 40px -14px color-mix(in oklab, black 70%, transparent),
+    0 0 36px -8px color-mix(in oklab, var(--highlight) 40%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tilt-card:hover {
+    transform: none;
+  }
+}
+
+/* 3D press for primary buttons — raised at rest (colored bottom "lip" like a
+   physical keycap), lifts on hover, presses down into the page on click.
+   This is an unlayered rule, so it wins over any Tailwind utility on the
+   same element regardless of source order — safe to add alongside the
+   inline active:scale-[0.97] some buttons still carry without stripping it. */
+.btn-3d {
+  transform: translateY(0);
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.15s ease;
+  box-shadow:
+    0 3px 0 0 color-mix(in oklab, black 40%, var(--primary-hover)),
+    0 5px 14px -3px color-mix(in oklab, black 55%, transparent);
+}
+.btn-3d:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 5px 0 0 color-mix(in oklab, black 40%, var(--primary-hover)),
+    0 10px 26px -4px color-mix(in oklab, var(--primary) 55%, transparent);
+}
+.btn-3d:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, black 40%, var(--primary-hover)),
+    0 2px 6px -2px color-mix(in oklab, black 55%, transparent);
+}
+.btn-3d:disabled {
+  transform: none;
+  box-shadow:
+    0 3px 0 0 color-mix(in oklab, black 40%, var(--primary-hover)),
+    0 5px 14px -3px color-mix(in oklab, black 55%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-3d {
+    transition: none;
+  }
+  .btn-3d:hover,
+  .btn-3d:active {
+    transform: none;
+  }
+}
+
+/* Same 3D press, for outline/transparent-background buttons (border-primary
+   style secondary CTAs) — a colored glow "lip" instead of a solid one, since
+   there's no fill color to visually anchor a solid edge to. */
+.btn-3d-outline {
+  transform: translateY(0);
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.15s ease;
+  box-shadow:
+    0 3px 0 0 color-mix(in oklab, var(--primary) 30%, transparent),
+    0 4px 10px -3px color-mix(in oklab, black 45%, transparent);
+}
+.btn-3d-outline:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 5px 0 0 color-mix(in oklab, var(--primary) 45%, transparent),
+    0 10px 22px -4px color-mix(in oklab, var(--primary) 35%, transparent);
+}
+.btn-3d-outline:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, var(--primary) 30%, transparent),
+    0 2px 6px -2px color-mix(in oklab, black 45%, transparent);
+}
+.btn-3d-outline:disabled {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-3d-outline {
+    transition: none;
+  }
+  .btn-3d-outline:hover,
+  .btn-3d-outline:active {
+    transform: none;
+  }
+}
+
+/* Same again, neutral-toned (no red glow) — for chrome that isn't really a
+   call-to-action: the account menu trigger, footer icon links. A red glow
+   at rest on these would be louder than they should be. */
+.btn-3d-ghost {
+  transform: translateY(0);
+  transition:
+    transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.15s ease;
+  box-shadow:
+    0 2px 0 0 color-mix(in oklab, white 12%, transparent),
+    0 3px 8px -3px rgb(0 0 0 / 0.4);
+}
+.btn-3d-ghost:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 3px 0 0 color-mix(in oklab, white 16%, transparent),
+    0 6px 14px -3px rgb(0 0 0 / 0.45);
+}
+.btn-3d-ghost:active {
+  transform: translateY(1px);
+  box-shadow:
+    0 0 0 0 transparent,
+    0 1px 4px -2px rgb(0 0 0 / 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-3d-ghost {
+    transition: none;
+  }
+  .btn-3d-ghost:hover,
+  .btn-3d-ghost:active {
+    transform: none;
+  }
+}
+
+/* Scroll-reveal (see RevealOnScroll.tsx) — starts hidden/offset, JS flips
+   `.is-visible` on once it enters the viewport. */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.reveal-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
