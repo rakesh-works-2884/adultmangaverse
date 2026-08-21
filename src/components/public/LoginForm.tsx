@@ -29,17 +29,22 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     }
 
     startTransition(async () => {
-      const res = await signIn("credentials", {
-        email: parsed.data.email,
-        password: parsed.data.password,
-        redirect: false,
-      });
-      if (!res || res.error) {
+      try {
+        const res = await signIn("credentials", {
+          email: parsed.data.email,
+          password: parsed.data.password,
+          redirect: false,
+        });
+        if (!res || res.error) {
+          setError("Invalid email or password.");
+          return;
+        }
+        const targetUrl = callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/";
+        window.location.href = targetUrl;
+      } catch (err) {
+        console.error("[LOGIN FORM] signIn error:", err);
         setError("Invalid email or password.");
-        return;
       }
-      router.push(callbackUrl || "/");
-      router.refresh();
     });
   }
 

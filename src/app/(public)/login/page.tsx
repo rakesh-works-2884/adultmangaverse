@@ -17,8 +17,21 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string; reset?: string }>;
 }) {
-  const { callbackUrl, reset } = await searchParams;
-  const session = await auth();
+  let callbackUrl = "/";
+  let reset = "";
+  try {
+    const params = await searchParams;
+    if (params?.callbackUrl) callbackUrl = params.callbackUrl;
+    if (params?.reset) reset = params.reset;
+  } catch {}
+
+  let session = null;
+  try {
+    session = await auth();
+  } catch (e) {
+    console.error("[LOGIN PAGE] auth check error:", e);
+  }
+
   if (session) redirect(callbackUrl || "/");
 
   return (
