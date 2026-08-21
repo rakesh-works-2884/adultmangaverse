@@ -54,3 +54,19 @@ export async function setUserTier(userId: string, tier: string): Promise<ActionR
     return { ok: false, error: "Could not update tier." };
   }
 }
+
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  const session = await requireAdmin();
+  if (!session) return { ok: false, error: "Not authorized." };
+  if (session.user.id === userId) {
+    return { ok: false, error: "You cannot delete your own admin account." };
+  }
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+    revalidatePath("/admin/users");
+    return { ok: true };
+  } catch (e) {
+    console.error("[USER] delete user failed:", e);
+    return { ok: false, error: "Could not delete user." };
+  }
+}
