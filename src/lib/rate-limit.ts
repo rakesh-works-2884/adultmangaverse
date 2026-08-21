@@ -42,8 +42,12 @@ export function resetRateLimit(key: string): void {
 
 /** Best-effort client IP from proxy headers — only as good as what's in front of the app. */
 export async function clientIp(): Promise<string> {
-  const h = await headers();
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return h.get("x-real-ip") ?? "unknown";
+  try {
+    const h = await headers();
+    const forwarded = h.get("x-forwarded-for");
+    if (forwarded) return forwarded.split(",")[0].trim();
+    return h.get("x-real-ip") ?? "unknown";
+  } catch {
+    return "unknown";
+  }
 }
