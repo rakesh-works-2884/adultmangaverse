@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { loginSchema } from "@/lib/validators";
 import { authInputWithIconClass } from "@/components/public/AuthCard";
+import { authenticateUser } from "@/actions/auth-actions";
 
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   const router = useRouter();
@@ -29,21 +29,13 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     }
 
     startTransition(async () => {
-      try {
-        const res = await signIn("credentials", {
-          email: parsed.data.email,
-          password: parsed.data.password,
-          redirect: false,
-        });
-        if (!res || res.error) {
-          setError("Invalid email or password.");
-          return;
-        }
-        const targetUrl = callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/";
-        window.location.href = targetUrl;
-      } catch (err) {
-        console.error("[LOGIN FORM] signIn error:", err);
-        setError("Invalid email or password.");
+      const res = await authenticateUser({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        callbackUrl,
+      });
+      if (res && !res.ok) {
+        setError(res.error);
       }
     });
   }
