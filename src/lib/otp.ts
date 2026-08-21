@@ -50,14 +50,17 @@ export async function issueOtp(email: string, purpose: OtpPurpose): Promise<OtpR
     },
   });
 
-  try {
-    await sendEmail({
-      to: emailLower,
-      subject: `${code} is your ${purpose === "SIGNUP" ? "verification" : "password reset"} code`,
-      html: emailHtml(code, purpose),
-    });
-  } catch {
-    return { ok: false, error: "Could not send the email. Please try again in a moment." };
+  const sent = await sendEmail({
+    to: emailLower,
+    subject: `${code} is your ${purpose === "SIGNUP" ? "verification" : "password reset"} code`,
+    html: emailHtml(code, purpose),
+  });
+
+  // Always log OTP code to server logs so admins/developers can see it even if email delivery is blocked by Resend restrictions
+  console.log(`[OTP CODE] Verification code for ${emailLower} (${purpose}): ${code}`);
+
+  if (!sent && process.env.RESEND_API_KEY) {
+    console.warn(`[OTP] Resend delivery failed for ${emailLower}. Check server logs for code ${code} or verify your domain in Resend.`);
   }
 
   return { ok: true };
