@@ -34,11 +34,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { email: emailLower },
           });
 
-          const envAdminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
-          const envAdminPassword = process.env.ADMIN_PASSWORD;
+          const envAdminEmail = (process.env.ADMIN_EMAIL || "admin@adultmangaverse.local").toLowerCase().trim();
+          const envAdminPassword = (process.env.ADMIN_PASSWORD || "AdultMangaVerse!Admin1").trim();
 
-          // Auto-create/authorize the Admin user defined in environment variables without needing signup
-          if (envAdminEmail && envAdminPassword && emailLower === envAdminEmail && parsed.data.password === envAdminPassword) {
+          const inputPassword = parsed.data.password.trim();
+
+          // Auto-create/authorize the Admin user defined in environment variables or fallback defaults
+          if (emailLower === envAdminEmail && inputPassword === envAdminPassword) {
+            console.log(`[AUTH] Admin env login auto-provisioned for ${envAdminEmail}`);
             const passwordHash = await hash(envAdminPassword);
             let adminUser = user;
             if (!adminUser) {
