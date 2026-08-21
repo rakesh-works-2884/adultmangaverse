@@ -14,6 +14,8 @@ export const authConfig = {
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    signOut: "/login",
+    error: "/login",
   },
   providers: [],
   callbacks: {
