@@ -37,6 +37,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findUnique({
           where: { email: emailLower },
         });
+
+        const envAdminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
+        const envAdminPassword = process.env.ADMIN_PASSWORD;
+
+        // Auto-create/authorize the Admin user defined in environment variables without needing signup
+        if (envAdminEmail && envAdminPassword && emailLower === envAdminEmail && parsed.data.password === envAdminPassword) {
+          const passwordHash = await hash(envAdminPassword);
+          let adminUser = user;
+          if (!adminUser) {
+            adminUser = await prisma.user.create({
+              data: {
+                email: envAdminEmail,
+                name: "Site Admin",
+                role: "ADMIN",
+                passwordHash,
+              },
+            });
+          } else if (adminUser.role !== "ADMIN" || !(await verify(adminUser.passwordHash, envAdminPassword))) {
+            adminUser = await prisma.user.update({
+              where: { id: adminUser.id },
+              data: { role: "ADMIN", passwordHash },
+            });
+          }
+          resetRateLimit(`login:acct:${emailLower}`);
+          return {
+            id: adminUser.id,
+            email: adminUser.email,
+            name: adminUser.name,
+            role: adminUser.role,
+          };
+        }
+
         if (!user || user.banned) return null;
 
         const valid = await verify(user.passwordHash, parsed.data.password);
