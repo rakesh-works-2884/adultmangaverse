@@ -13,13 +13,13 @@ function r2RemotePatterns() {
 }
 
 const nextConfig: NextConfig = {
-  // Lean container output (Dockerfile copies .next/standalone).
-  output: "standalone",
-  // sharp ships a native .node with sibling DLLs; bundling it via Turbopack
-  // breaks the Windows loader (ERR_DLOPEN_FAILED). Keep it external so Next
-  // requires it normally at runtime. Same for the Prisma driver adapter.
-  serverExternalPackages: ["sharp", "@prisma/adapter-pg", "@napi-rs/canvas", "pdf-to-img", "pdfjs-dist"],
-  images: { remotePatterns: r2RemotePatterns() },
+  // Enable HTTP compression for faster network responses
+  compress: true,
+  reactStrictMode: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: r2RemotePatterns(),
+  },
   experimental: {
     // Uploads go through Server Actions: images ≤10MB, and chapter PDFs can
     // be larger, so raise the default 1MB Server Action body limit.

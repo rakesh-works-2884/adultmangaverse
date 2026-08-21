@@ -1,3 +1,4 @@
+import "server-only";
 import { writeFile, mkdir, unlink } from "node:fs/promises";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import path from "node:path";
