@@ -12,6 +12,33 @@ function r2RemotePatterns() {
   }
 }
 
+// Hosts a Server Action may be POSTed from. Next.js CSRF-checks every Server
+// Action by comparing the browser's `Origin` against `Host` / `X-Forwarded-Host`;
+// behind a reverse proxy (Hostinger, nginx, Cloudflare) those two routinely
+// disagree — the proxy forwards the public domain while Node sees its own —
+// and the action is aborted before it runs. The client only ever sees the
+// generic "An error occurred in the Server Components render" message.
+// Listing our own domain here is the documented remedy. Read from env so no
+// domain is hard-coded; set NEXT_PUBLIC_SITE_URL in the deployment *before*
+// building, since this is baked into the build.
+function serverActionOrigins(): string[] {
+  const hosts = new Set<string>();
+  for (const raw of [process.env.NEXT_PUBLIC_SITE_URL, process.env.AUTH_URL, process.env.NEXTAUTH_URL]) {
+    if (!raw) continue;
+    try {
+      const { host, hostname } = new URL(raw.includes("://") ? raw : `https://${raw}`);
+      const bare = hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+      hosts.add(host);
+      hosts.add(bare);
+      hosts.add(`www.${bare}`);
+      hosts.add(`*.${bare}`);
+    } catch {
+      // Malformed URL in env — nothing to allow.
+    }
+  }
+  return [...hosts];
+}
+
 const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp", "pdf-to-img"],
   // Enable HTTP compression for faster network responses
@@ -26,6 +53,7 @@ const nextConfig: NextConfig = {
     // be larger, so raise the default 1MB Server Action body limit.
     serverActions: {
       bodySizeLimit: "25mb",
+      allowedOrigins: serverActionOrigins(),
     },
     // Per-icon/per-function imports instead of pulling in the whole barrel
     // file — smaller client JS, which matters most on mobile (parse/exec

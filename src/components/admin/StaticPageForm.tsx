@@ -56,7 +56,14 @@ export function StaticPageForm({
         setSaved(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
-        setError((err as Error).message || "An unexpected error occurred.");
+        // A production build strips the real message from any server-side
+        // failure, leaving only a digest — show it, so it can be matched to
+        // the "[SERVER ERROR] … digest …" line in the server log.
+        const e = err as Error & { digest?: string };
+        setError(
+          (e.message || "An unexpected error occurred.") +
+            (e.digest ? ` (server error ref: ${e.digest})` : ""),
+        );
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
