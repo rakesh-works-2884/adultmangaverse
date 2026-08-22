@@ -13,6 +13,7 @@ function r2RemotePatterns() {
 }
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["sharp", "pdf-to-img"],
   // Enable HTTP compression for faster network responses
   compress: true,
   reactStrictMode: true,
