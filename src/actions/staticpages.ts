@@ -57,12 +57,12 @@ export async function createStaticPage(fd: FormData): Promise<ActionResult<{ id:
 }
 
 export async function updateStaticPage(id: string, fd: FormData): Promise<ActionResult> {
-  if (!(await requireAdmin())) return { ok: false, error: "Not authorized." };
-  const parsed = staticPageSchema.safeParse(parseForm(fd));
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
-  const data = parsed.data;
-
   try {
+    if (!(await requireAdmin())) return { ok: false, error: "Not authorized." };
+    const parsed = staticPageSchema.safeParse(parseForm(fd));
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    const data = parsed.data;
+
     const existing = await prisma.staticPage.findUnique({ where: { id } });
     if (!existing) return { ok: false, error: "Page not found." };
 
@@ -88,14 +88,20 @@ export async function updateStaticPage(id: string, fd: FormData): Promise<Action
         nofollow: data.nofollow ?? false,
       },
     });
-    revalidatePath("/admin/pages");
-    revalidatePath(`/p/${slug}`);
-    if (existing.slug !== slug) revalidatePath(`/p/${existing.slug}`);
+
+    try {
+      revalidatePath("/admin/pages");
+      revalidatePath(`/p/${slug}`);
+      if (existing.slug !== slug) revalidatePath(`/p/${existing.slug}`);
+    } catch (revErr) {
+      console.warn("[PAGE] revalidatePath error ignored:", revErr);
+    }
+
     return { ok: true };
   } catch (e) {
     if (isUniqueViolation(e)) return { ok: false, error: "A page with this slug already exists." };
     console.error("[PAGE] update failed:", e);
-    return { ok: false, error: "Could not update page." };
+    return { ok: false, error: (e as Error).message || "Could not update page." };
   }
 }
 

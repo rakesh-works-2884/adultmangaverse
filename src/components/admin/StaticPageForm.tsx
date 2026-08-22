@@ -33,26 +33,40 @@ export function StaticPageForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const [saved, setSaved] = useState(false);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setSaved(false);
     const fd = new FormData(e.currentTarget);
     fd.set("contentHtml", content);
     startTransition(async () => {
-      const res = mode === "create" ? await createStaticPage(fd) : await updateStaticPage(initial!.id, fd);
-      if (!res.ok) {
-        setError(res.error);
+      try {
+        const res = mode === "create" ? await createStaticPage(fd) : await updateStaticPage(initial!.id, fd);
+        if (!res.ok) {
+          setError(res.error || "Could not save page changes.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+        if (mode === "create") {
+          router.push("/admin/pages");
+          return;
+        }
+        setSaved(true);
+        router.refresh();
         window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
+      } catch (err) {
+        setError((err as Error).message || "An unexpected error occurred.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
-      router.push("/admin/pages");
-      router.refresh();
     });
   }
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-5">
       {error ? <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p> : null}
+      {saved ? <p className="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">Saved changes successfully.</p> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
