@@ -95,6 +95,10 @@ model Manga {
   published      Boolean          @default(false)
   seoTitle       String?
   seoDescription String?
+  focusKeyword   String?
+  canonicalUrl   String?
+  noindex        Boolean          @default(false)
+  nofollow       Boolean          @default(false)
   ogImage        String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -279,6 +283,10 @@ model StaticPage {
   contentHtml    String   @default("")
   seoTitle       String?
   seoDescription String?
+  focusKeyword   String?
+  canonicalUrl   String?
+  noindex        Boolean  @default(false)
+  nofollow       Boolean  @default(false)
   updatedAt      DateTime @updatedAt
 }
 
@@ -294,6 +302,10 @@ model Blog {
   publishedAt    DateTime?
   seoTitle       String?
   seoDescription String?
+  focusKeyword   String?
+  canonicalUrl   String?
+  noindex        Boolean   @default(false)
+  nofollow       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -314,4 +326,30 @@ model SlugRedirect {
 
   @@unique([entity, oldSlug])
   @@index([entity, oldSlug])
+}
+
+model SeoRedirect {
+  id             String   @id @default(cuid())
+  sourceUrl      String   @unique
+  destinationUrl String
+  statusCode     Int      @default(301) // 301, 302, 307
+  active         Boolean  @default(true)
+  hits           Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([sourceUrl, active])
+}
+
+model Seo404Log {
+  id        String   @id @default(cuid())
+  url       String   @unique
+  referrer  String?
+  userAgent String?
+  hits      Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([url])
+  @@index([hits])
 }

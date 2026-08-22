@@ -65,6 +65,10 @@ export const mangaSchema = z.object({
   genreIds: z.array(z.string().min(1)).default([]),
   seoTitle: z.string().trim().max(70, "Keep meta title ≤ 70 characters").optional(),
   seoDescription: z.string().trim().max(200, "Keep meta description ≤ 200 characters").optional(),
+  focusKeyword: z.string().trim().max(100).optional(),
+  canonicalUrl: z.string().trim().max(300).optional(),
+  noindex: z.boolean().default(false),
+  nofollow: z.boolean().default(false),
 });
 export type MangaInput = z.infer<typeof mangaSchema>;
 
@@ -80,6 +84,10 @@ export const staticPageSchema = z.object({
   contentHtml: z.string().max(50000).optional(),
   seoTitle: z.string().trim().max(70).optional(),
   seoDescription: z.string().trim().max(200).optional(),
+  focusKeyword: z.string().trim().max(100).optional(),
+  canonicalUrl: z.string().trim().max(300).optional(),
+  noindex: z.boolean().default(false),
+  nofollow: z.boolean().default(false),
 });
 export type StaticPageInput = z.infer<typeof staticPageSchema>;
 
@@ -88,16 +96,20 @@ export const blogSchema = z.object({
   slug: z
     .string()
     .trim()
-    .max(80)
+    .max(120)
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug may contain only lowercase letters, numbers, and hyphens")
     .optional()
     .or(z.literal("")),
-  excerpt: z.string().trim().max(300, "Keep the excerpt under 300 characters").optional(),
+  excerpt: z.string().trim().max(500).optional(),
   contentHtml: z.string().max(100000).optional(),
-  author: z.string().trim().max(120).optional(),
+  author: z.string().trim().max(100).optional(),
   published: z.boolean().default(false),
   seoTitle: z.string().trim().max(70).optional(),
   seoDescription: z.string().trim().max(200).optional(),
+  focusKeyword: z.string().trim().max(100).optional(),
+  canonicalUrl: z.string().trim().max(300).optional(),
+  noindex: z.boolean().default(false),
+  nofollow: z.boolean().default(false),
 });
 export type BlogInput = z.infer<typeof blogSchema>;
 

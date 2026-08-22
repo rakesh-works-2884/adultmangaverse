@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Loader2, Upload } from "lucide-react";
 import { createBlog, updateBlog } from "@/actions/blogs";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
-import { SeoFields } from "@/components/admin/SeoFields";
+import { RankMathSeoWidget } from "@/components/admin/RankMathSeoWidget";
 import { adminInput, adminLabel, adminTextarea, btnPrimary, btnSecondary } from "@/components/admin/styles";
 
 export type BlogFormInitial = {
@@ -20,6 +20,10 @@ export type BlogFormInitial = {
   coverImage: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  focusKeyword?: string | null;
+  canonicalUrl?: string | null;
+  noindex?: boolean;
+  nofollow?: boolean;
 };
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -101,13 +105,17 @@ export function BlogForm({
             <p className="text-xs text-text-muted">Paste or drop an image directly into the editor, or use the image button in the toolbar.</p>
           </div>
 
-          <SeoFields
+          <RankMathSeoWidget
             initialTitle={initial?.seoTitle ?? ""}
             initialDescription={initial?.seoDescription ?? ""}
+            initialFocusKeyword={initial?.focusKeyword ?? ""}
+            initialCanonicalUrl={initial?.canonicalUrl ?? ""}
+            initialNoindex={initial?.noindex ?? false}
+            initialNofollow={initial?.nofollow ?? false}
             fallbackTitle={initial?.title ?? ""}
+            synopsisOrContent={content}
             slug={initial?.slug ?? ""}
             pathPrefix="/blog"
-            titleTemplate={(t) => t}
           />
         </div>
 

@@ -57,6 +57,10 @@ function parseMangaForm(fd: FormData) {
     genreIds: fd.getAll("genreIds").map(String),
     seoTitle: String(fd.get("seoTitle") ?? "").trim() || undefined,
     seoDescription: String(fd.get("seoDescription") ?? "").trim() || undefined,
+    focusKeyword: String(fd.get("focusKeyword") ?? "").trim() || undefined,
+    canonicalUrl: String(fd.get("canonicalUrl") ?? "").trim() || undefined,
+    noindex: fd.get("noindex") === "on" || fd.get("noindex") === "true",
+    nofollow: fd.get("nofollow") === "on" || fd.get("nofollow") === "true",
   };
 }
 
@@ -131,6 +135,10 @@ export async function createManga(fd: FormData): Promise<ActionResult<{ id: stri
           published: data.published,
           seoTitle: data.seoTitle ?? null,
           seoDescription: data.seoDescription ?? null,
+          focusKeyword: data.focusKeyword ?? null,
+          canonicalUrl: data.canonicalUrl ?? null,
+          noindex: data.noindex ?? false,
+          nofollow: data.nofollow ?? false,
           genres: { connect: data.genreIds.map((id) => ({ id })) },
         },
       });
@@ -222,6 +230,10 @@ export async function updateManga(id: string, fd: FormData): Promise<ActionResul
           published: data.published,
           seoTitle: data.seoTitle ?? null,
           seoDescription: data.seoDescription ?? null,
+          focusKeyword: data.focusKeyword ?? null,
+          canonicalUrl: data.canonicalUrl ?? null,
+          noindex: data.noindex ?? false,
+          nofollow: data.nofollow ?? false,
           genres: { set: data.genreIds.map((gid) => ({ id: gid })) },
         },
       });

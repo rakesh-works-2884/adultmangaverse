@@ -18,6 +18,10 @@ export default async function EditStaticPage({ params }: { params: Promise<{ id:
     contentHtml: page.contentHtml,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
+    focusKeyword: page.focusKeyword,
+    canonicalUrl: page.canonicalUrl,
+    noindex: page.noindex,
+    nofollow: page.nofollow,
   };
 
   return (

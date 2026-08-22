@@ -18,6 +18,8 @@ export const SETTINGS_DEFAULTS = {
   defaultOgImage: "", // path or URL; empty → none
   twitterHandle: "", // e.g. @handle
   analyticsSnippet: "", // raw <script> analytics tag(s), injected site-wide
+  googleVerification: "", // Google Search Console HTML tag / code
+  bingVerification: "", // Bing Webmaster verification code
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS_DEFAULTS;

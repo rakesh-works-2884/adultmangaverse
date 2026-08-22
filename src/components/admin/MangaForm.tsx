@@ -7,7 +7,7 @@ import { Loader2, Plus, Upload } from "lucide-react";
 import { createManga, updateManga } from "@/actions/manga";
 import { createGenre } from "@/actions/genres";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
-import { SeoFields } from "@/components/admin/SeoFields";
+import { RankMathSeoWidget } from "@/components/admin/RankMathSeoWidget";
 import { MANGA_STATUSES, MANGA_TYPES, CONTENT_INTENSITIES, INTENSITY_LABELS } from "@/lib/validators";
 import {
   adminInput,
@@ -40,6 +40,10 @@ export type MangaFormInitial = {
   heroImageMobile: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
+  focusKeyword?: string | null;
+  canonicalUrl?: string | null;
+  noindex?: boolean;
+  nofollow?: boolean;
 };
 
 type Props = {
@@ -204,11 +208,17 @@ export function MangaForm({ mode, genres, initial }: Props) {
             <input name="authorLink" defaultValue={initial?.authorLink ?? ""} className={adminInput} maxLength={500} placeholder="https://…" />
           </Field>
 
-          <SeoFields
+          <RankMathSeoWidget
             initialTitle={initial?.seoTitle ?? ""}
             initialDescription={initial?.seoDescription ?? ""}
+            initialFocusKeyword={initial?.focusKeyword ?? ""}
+            initialCanonicalUrl={initial?.canonicalUrl ?? ""}
+            initialNoindex={initial?.noindex ?? false}
+            initialNofollow={initial?.nofollow ?? false}
             fallbackTitle={initial?.title ?? ""}
+            synopsisOrContent={initial?.synopsis ?? ""}
             slug={initial?.slug ?? ""}
+            pathPrefix="/manga"
           />
         </div>
 

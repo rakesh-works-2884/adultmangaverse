@@ -49,6 +49,10 @@ export default async function EditMangaPage({
     heroImageMobile: manga.heroImageMobile,
     seoTitle: manga.seoTitle,
     seoDescription: manga.seoDescription,
+    focusKeyword: manga.focusKeyword,
+    canonicalUrl: manga.canonicalUrl,
+    noindex: manga.noindex,
+    nofollow: manga.nofollow,
   };
 
   const chapterRows: ChapterRow[] = manga.chapters.map((c) => ({

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createStaticPage, updateStaticPage } from "@/actions/staticpages";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { RankMathSeoWidget } from "@/components/admin/RankMathSeoWidget";
 import { adminInput, adminLabel, adminTextarea, btnPrimary, btnSecondary } from "@/components/admin/styles";
 
 export type StaticPageInitial = {
@@ -14,6 +15,10 @@ export type StaticPageInitial = {
   contentHtml: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  focusKeyword?: string | null;
+  canonicalUrl?: string | null;
+  noindex?: boolean;
+  nofollow?: boolean;
 };
 
 export function StaticPageForm({
@@ -66,19 +71,18 @@ export function StaticPageForm({
         <RichTextEditor value={content} onChange={setContent} />
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <h3 className="mb-3 font-heading text-sm font-semibold">SEO (optional)</h3>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className={adminLabel}>Meta title</label>
-            <input name="seoTitle" defaultValue={initial?.seoTitle ?? ""} maxLength={70} className={adminInput} />
-          </div>
-          <div className="space-y-1.5">
-            <label className={adminLabel}>Meta description</label>
-            <textarea name="seoDescription" defaultValue={initial?.seoDescription ?? ""} rows={2} maxLength={200} className={adminTextarea} />
-          </div>
-        </div>
-      </div>
+      <RankMathSeoWidget
+        initialTitle={initial?.seoTitle ?? ""}
+        initialDescription={initial?.seoDescription ?? ""}
+        initialFocusKeyword={initial?.focusKeyword ?? ""}
+        initialCanonicalUrl={initial?.canonicalUrl ?? ""}
+        initialNoindex={initial?.noindex ?? false}
+        initialNofollow={initial?.nofollow ?? false}
+        fallbackTitle={initial?.title ?? ""}
+        synopsisOrContent={content}
+        slug={initial?.slug ?? ""}
+        pathPrefix="/p"
+      />
 
       <div className="flex items-center gap-3 border-t border-border pt-5">
         <button type="submit" disabled={pending} className={btnPrimary}>

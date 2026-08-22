@@ -16,6 +16,10 @@ function parseForm(fd: FormData) {
     contentHtml: String(fd.get("contentHtml") ?? ""),
     seoTitle: String(fd.get("seoTitle") ?? "").trim() || undefined,
     seoDescription: String(fd.get("seoDescription") ?? "").trim() || undefined,
+    focusKeyword: String(fd.get("focusKeyword") ?? "").trim() || undefined,
+    canonicalUrl: String(fd.get("canonicalUrl") ?? "").trim() || undefined,
+    noindex: fd.get("noindex") === "on" || fd.get("noindex") === "true",
+    nofollow: fd.get("nofollow") === "on" || fd.get("nofollow") === "true",
   };
 }
 
@@ -36,6 +40,10 @@ export async function createStaticPage(fd: FormData): Promise<ActionResult<{ id:
         contentHtml: data.contentHtml ? sanitizeRichText(data.contentHtml) : "",
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
+        focusKeyword: data.focusKeyword ?? null,
+        canonicalUrl: data.canonicalUrl ?? null,
+        noindex: data.noindex ?? false,
+        nofollow: data.nofollow ?? false,
       },
     });
     revalidatePath("/admin/pages");
@@ -74,6 +82,10 @@ export async function updateStaticPage(id: string, fd: FormData): Promise<Action
         contentHtml: data.contentHtml ? sanitizeRichText(data.contentHtml) : "",
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
+        focusKeyword: data.focusKeyword ?? null,
+        canonicalUrl: data.canonicalUrl ?? null,
+        noindex: data.noindex ?? false,
+        nofollow: data.nofollow ?? false,
       },
     });
     revalidatePath("/admin/pages");

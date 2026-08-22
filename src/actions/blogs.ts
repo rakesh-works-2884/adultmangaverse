@@ -21,6 +21,10 @@ function parseForm(fd: FormData) {
     published: fd.get("published") === "true",
     seoTitle: String(fd.get("seoTitle") ?? "").trim() || undefined,
     seoDescription: String(fd.get("seoDescription") ?? "").trim() || undefined,
+    focusKeyword: String(fd.get("focusKeyword") ?? "").trim() || undefined,
+    canonicalUrl: String(fd.get("canonicalUrl") ?? "").trim() || undefined,
+    noindex: fd.get("noindex") === "on" || fd.get("noindex") === "true",
+    nofollow: fd.get("nofollow") === "on" || fd.get("nofollow") === "true",
   };
 }
 
@@ -63,6 +67,10 @@ export async function createBlog(fd: FormData): Promise<ActionResult<{ id: strin
         publishedAt: data.published ? new Date() : null,
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
+        focusKeyword: data.focusKeyword ?? null,
+        canonicalUrl: data.canonicalUrl ?? null,
+        noindex: data.noindex ?? false,
+        nofollow: data.nofollow ?? false,
       },
     });
 
@@ -116,6 +124,10 @@ export async function updateBlog(id: string, fd: FormData): Promise<ActionResult
         publishedAt: data.published ? (existing.publishedAt ?? new Date()) : existing.publishedAt,
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
+        focusKeyword: data.focusKeyword ?? null,
+        canonicalUrl: data.canonicalUrl ?? null,
+        noindex: data.noindex ?? false,
+        nofollow: data.nofollow ?? false,
       },
     });
 
