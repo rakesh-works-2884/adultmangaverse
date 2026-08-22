@@ -54,7 +54,6 @@ export function StaticPageForm({
           return;
         }
         setSaved(true);
-        router.refresh();
         window.scrollTo({ top: 0, behavior: "smooth" });
       } catch (err) {
         setError((err as Error).message || "An unexpected error occurred.");

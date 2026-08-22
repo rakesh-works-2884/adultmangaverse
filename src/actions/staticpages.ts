@@ -91,6 +91,7 @@ export async function updateStaticPage(id: string, fd: FormData): Promise<Action
 
     try {
       revalidatePath("/admin/pages");
+      revalidatePath(`/admin/pages/${id}/edit`);
       revalidatePath(`/p/${slug}`);
       if (existing.slug !== slug) revalidatePath(`/p/${existing.slug}`);
     } catch (revErr) {
