@@ -184,8 +184,13 @@ export async function runSeoAudit(): Promise<{ ok: boolean; report?: SeoAuditRep
  * Get all SEO Redirection rules.
  */
 export async function getSeoRedirects() {
-  await requireAdmin();
-  return prisma.seoRedirect.findMany({ orderBy: { updatedAt: "desc" } });
+  try {
+    await requireAdmin();
+    return await prisma.seoRedirect.findMany({ orderBy: { updatedAt: "desc" } });
+  } catch (err) {
+    console.error("[SEO] Failed to fetch redirects:", err);
+    return [];
+  }
 }
 
 /**
@@ -233,8 +238,13 @@ export async function deleteSeoRedirect(id: string): Promise<{ ok: boolean; erro
  * Get all 404 error logs.
  */
 export async function get404Logs() {
-  await requireAdmin();
-  return prisma.seo404Log.findMany({ orderBy: { hits: "desc" }, take: 100 });
+  try {
+    await requireAdmin();
+    return await prisma.seo404Log.findMany({ orderBy: { hits: "desc" }, take: 100 });
+  } catch (err) {
+    console.error("[SEO] Failed to fetch 404 logs:", err);
+    return [];
+  }
 }
 
 /**

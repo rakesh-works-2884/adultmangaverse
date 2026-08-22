@@ -6,9 +6,18 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminSeoPage() {
   const [settings, redirects, logs] = await Promise.all([
-    getSettings(),
-    getSeoRedirects(),
-    get404Logs(),
+    getSettings().catch((err) => {
+      console.error("[ADMIN SEO] getSettings error:", err);
+      return {};
+    }),
+    getSeoRedirects().catch((err) => {
+      console.error("[ADMIN SEO] getSeoRedirects error:", err);
+      return [];
+    }),
+    get404Logs().catch((err) => {
+      console.error("[ADMIN SEO] get404Logs error:", err);
+      return [];
+    }),
   ]);
 
   return (
@@ -20,7 +29,7 @@ export default async function AdminSeoPage() {
         </p>
       </div>
 
-      <RankMathAdminHub settings={settings} redirects={redirects} logs={logs} />
+      <RankMathAdminHub settings={settings || {}} redirects={redirects || []} logs={logs || []} />
     </div>
   );
 }

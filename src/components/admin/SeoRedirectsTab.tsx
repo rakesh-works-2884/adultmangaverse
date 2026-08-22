@@ -21,12 +21,14 @@ interface Seo404Entry {
 }
 
 export function SeoRedirectsTab({
-  redirects,
-  logs,
+  redirects = [],
+  logs = [],
 }: {
-  redirects: SeoRedirectRule[];
-  logs: Seo404Entry[];
+  redirects?: SeoRedirectRule[];
+  logs?: Seo404Entry[];
 }) {
+  const safeRedirects = redirects || [];
+  const safeLogs = logs || [];
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -111,14 +113,14 @@ export function SeoRedirectsTab({
       {/* SECTION 2: Active Redirect Rules List */}
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
         <div className="border-b border-border bg-bg/50 px-5 py-3.5 flex items-center justify-between">
-          <h3 className="font-heading text-sm font-semibold text-text">Active Redirection Rules ({redirects.length})</h3>
+          <h3 className="font-heading text-sm font-semibold text-text">Active Redirection Rules ({safeRedirects.length})</h3>
         </div>
 
-        {redirects.length === 0 ? (
+        {safeRedirects.length === 0 ? (
           <div className="p-6 text-center text-xs text-text-muted">No custom redirect rules configured yet.</div>
         ) : (
           <div className="divide-y divide-border/60">
-            {redirects.map((r) => (
+            {safeRedirects.map((r) => (
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-4 p-4 text-xs">
                 <div className="flex items-center gap-3 font-mono">
                   <span className="rounded bg-accent/10 text-accent px-2 py-0.5 font-bold">{r.statusCode}</span>
@@ -144,22 +146,22 @@ export function SeoRedirectsTab({
         <div className="border-b border-border bg-bg/50 px-5 py-3.5 flex items-center justify-between">
           <div>
             <h3 className="font-heading text-sm font-semibold text-text flex items-center gap-2">
-              <ShieldAlert className="size-4 text-amber-400" /> Rank Math 404 Error Monitor ({logs.length})
+              <ShieldAlert className="size-4 text-amber-400" /> Rank Math 404 Error Monitor ({safeLogs.length})
             </h3>
             <p className="text-[11px] text-text-muted mt-0.5">Captures broken links visited by users/crawlers. Fix them with 1-click 301 redirects.</p>
           </div>
-          {logs.length > 0 && (
+          {safeLogs.length > 0 && (
             <button type="button" onClick={onClear404s} className="text-xs text-text-muted hover:text-rose-400 underline">
               Clear 404 Logs
             </button>
           )}
         </div>
 
-        {logs.length === 0 ? (
+        {safeLogs.length === 0 ? (
           <div className="p-6 text-center text-xs text-text-muted">No 404 errors recorded recently.</div>
         ) : (
           <div className="divide-y divide-border/60">
-            {logs.map((log) => (
+            {safeLogs.map((log) => (
               <div key={log.id} className="p-4 space-y-2 text-xs">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="font-mono text-text font-medium">{log.url}</div>

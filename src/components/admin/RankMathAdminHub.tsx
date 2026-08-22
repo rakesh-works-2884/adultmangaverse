@@ -13,8 +13,10 @@ interface RankMathAdminHubProps {
   logs: any[];
 }
 
-export function RankMathAdminHub({ settings, redirects, logs }: RankMathAdminHubProps) {
+export function RankMathAdminHub({ settings = {}, redirects = [], logs = [] }: RankMathAdminHubProps) {
   const [tab, setTab] = useState<"general" | "sitemap" | "redirects" | "audit">("general");
+  const safeLogs = logs || [];
+  const safeRedirects = redirects || [];
 
   return (
     <div className="space-y-6">
@@ -50,7 +52,7 @@ export function RankMathAdminHub({ settings, redirects, logs }: RankMathAdminHub
             tab === "redirects" ? "bg-accent text-white" : "bg-surface border border-border text-text-muted hover:text-text"
           )}
         >
-          <ShieldAlert className="size-4" /> Redirections & 404 Monitor ({logs.length})
+          <ShieldAlert className="size-4" /> Redirections & 404 Monitor ({safeLogs.length})
         </button>
 
         <button
@@ -70,7 +72,7 @@ export function RankMathAdminHub({ settings, redirects, logs }: RankMathAdminHub
 
       {tab === "audit" && <SeoAuditTab />}
 
-      {tab === "redirects" && <SeoRedirectsTab redirects={redirects} logs={logs} />}
+      {tab === "redirects" && <SeoRedirectsTab redirects={safeRedirects} logs={safeLogs} />}
 
       {tab === "sitemap" && (
         <div className="max-w-2xl space-y-5 rounded-xl border border-border bg-surface p-5">
