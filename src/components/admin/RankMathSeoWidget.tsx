@@ -81,6 +81,14 @@ export function RankMathSeoWidget({
 
   return (
     <div className="rounded-xl border border-border bg-surface p-5 shadow-sm space-y-5">
+      {/* Persistent Hidden Inputs for Guaranteed Form Submission Across Tabs */}
+      <input type="hidden" name="focusKeyword" value={focusKeyword} />
+      <input type="hidden" name="seoTitle" value={seoTitle} />
+      <input type="hidden" name="seoDescription" value={seoDescription} />
+      <input type="hidden" name="canonicalUrl" value={canonicalUrl} />
+      <input type="hidden" name="noindex" value={noindex ? "true" : "false"} />
+      <input type="hidden" name="nofollow" value={nofollow ? "true" : "false"} />
+
       {/* Header with Rank Math Score Badge */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-4">
         <div className="flex items-center gap-3">
@@ -141,7 +149,6 @@ export function RankMathSeoWidget({
           <div className="space-y-1.5">
             <label className={adminLabel}>Focus Keyword (Target Search Term)</label>
             <input
-              name="focusKeyword"
               value={focusKeyword}
               onChange={(e) => setFocusKeyword(e.target.value)}
               className={adminInput}
@@ -164,12 +171,11 @@ export function RankMathSeoWidget({
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className={adminLabel}>SEO Meta Title</label>
-              <span className={cn("text-xs font-mono", report.stats.titleLength > 60 ? "text-amber-400" : "text-text-muted")}>
-                {report.stats.titleLength}/60 chars
+              <span className={cn("text-xs font-mono", safeStats.titleLength > 60 ? "text-amber-400" : "text-text-muted")}>
+                {safeStats.titleLength}/60 chars
               </span>
             </div>
             <input
-              name="seoTitle"
               value={seoTitle}
               onChange={(e) => setSeoTitle(e.target.value)}
               maxLength={70}
@@ -182,12 +188,11 @@ export function RankMathSeoWidget({
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className={adminLabel}>SEO Meta Description</label>
-              <span className={cn("text-xs font-mono", report.stats.descriptionLength > 160 ? "text-amber-400" : "text-text-muted")}>
-                {report.stats.descriptionLength}/160 chars
+              <span className={cn("text-xs font-mono", safeStats.descriptionLength > 160 ? "text-amber-400" : "text-text-muted")}>
+                {safeStats.descriptionLength}/160 chars
               </span>
             </div>
             <textarea
-              name="seoDescription"
               value={seoDescription}
               onChange={(e) => setSeoDescription(e.target.value)}
               rows={3}
@@ -255,7 +260,6 @@ export function RankMathSeoWidget({
           <div className="space-y-1.5">
             <label className={adminLabel}>Canonical URL Override</label>
             <input
-              name="canonicalUrl"
               value={canonicalUrl}
               onChange={(e) => setCanonicalUrl(e.target.value)}
               className={adminInput}
@@ -268,7 +272,6 @@ export function RankMathSeoWidget({
             <label className="flex items-center gap-3 rounded-lg border border-border bg-bg/40 p-3 cursor-pointer">
               <input
                 type="checkbox"
-                name="noindex"
                 checked={noindex}
                 onChange={(e) => setNoindex(e.target.checked)}
                 className="size-4 rounded border-border accent-accent"
@@ -282,7 +285,6 @@ export function RankMathSeoWidget({
             <label className="flex items-center gap-3 rounded-lg border border-border bg-bg/40 p-3 cursor-pointer">
               <input
                 type="checkbox"
-                name="nofollow"
                 checked={nofollow}
                 onChange={(e) => setNofollow(e.target.checked)}
                 className="size-4 rounded border-border accent-accent"
