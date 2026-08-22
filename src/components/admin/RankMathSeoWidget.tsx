@@ -43,25 +43,39 @@ export function RankMathSeoWidget({
 
   // Perform real-time SEO analysis
   const report = useMemo(() => {
-    return analyzeSeo({
-      title: fallbackTitle,
-      seoTitle,
-      seoDescription,
-      synopsisOrContent,
-      slug,
-      focusKeyword,
-    });
+    try {
+      return analyzeSeo({
+        title: fallbackTitle || "",
+        seoTitle: seoTitle || "",
+        seoDescription: seoDescription || "",
+        synopsisOrContent: synopsisOrContent || "",
+        slug: slug || "",
+        focusKeyword: focusKeyword || "",
+      });
+    } catch {
+      return {
+        score: 50,
+        rating: "ok" as const,
+        tests: [],
+        stats: { wordCount: 0, keywordDensity: 0, titleLength: 0, descriptionLength: 0 },
+      };
+    }
   }, [fallbackTitle, seoTitle, seoDescription, synopsisOrContent, slug, focusKeyword]);
+
+  const safeTests = report?.tests || [];
+  const safeStats = report?.stats || { wordCount: 0, keywordDensity: 0, titleLength: 0, descriptionLength: 0 };
+  const safeScore = report?.score ?? 50;
 
   const previewTitle = seoTitle || (fallbackTitle ? `Read ${fallbackTitle} Online` : "Meta title preview");
   const previewDesc = seoDescription || "Add a meta description to control how this page appears in search results.";
-  const displayUrl = `${siteConfig.url.replace(/^https?:\/\//, "")}${pathPrefix}/${slug || "slug"}`;
+  const siteUrl = siteConfig?.url ? String(siteConfig.url) : "localhost:3000";
+  const displayUrl = `${siteUrl.replace(/^https?:\/\//, "")}${pathPrefix || ""}/${slug || "slug"}`;
 
   // Score badge style helper
   const scoreColor =
-    report.score >= 80
+    safeScore >= 80
       ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-      : report.score >= 50
+      : safeScore >= 50
       ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
       : "bg-rose-500/10 border-rose-500/30 text-rose-400";
 
@@ -82,7 +96,7 @@ export function RankMathSeoWidget({
         {/* Rank Math Score Badge */}
         <div className={cn("flex items-center gap-2 rounded-lg border px-3 py-1.5 font-mono text-sm font-bold", scoreColor)}>
           <span>SEO Score:</span>
-          <span className="text-base">{report.score} / 100</span>
+          <span className="text-base">{safeScore} / 100</span>
         </div>
       </div>
 
@@ -106,7 +120,7 @@ export function RankMathSeoWidget({
             activeTab === "analysis" ? "bg-accent/20 text-accent" : "text-text-muted hover:text-text"
           )}
         >
-          <CheckCircle2 className="size-3.5" /> SEO Checklist ({report.tests.filter((t) => t.passed).length}/{report.tests.length})
+          <CheckCircle2 className="size-3.5" /> SEO Checklist ({safeTests.filter((t) => t.passed).length}/{safeTests.length})
         </button>
         <button
           type="button"
@@ -192,25 +206,25 @@ export function RankMathSeoWidget({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
             <div className="rounded-lg border border-border bg-bg/50 p-2.5">
               <div className="text-xs text-text-muted">Word Count</div>
-              <div className="text-base font-bold font-mono">{report.stats.wordCount}</div>
+              <div className="text-base font-bold font-mono">{safeStats.wordCount}</div>
             </div>
             <div className="rounded-lg border border-border bg-bg/50 p-2.5">
               <div className="text-xs text-text-muted">Keyword Density</div>
-              <div className="text-base font-bold font-mono">{report.stats.keywordDensity}%</div>
+              <div className="text-base font-bold font-mono">{safeStats.keywordDensity}%</div>
             </div>
             <div className="rounded-lg border border-border bg-bg/50 p-2.5">
               <div className="text-xs text-text-muted">Title Length</div>
-              <div className="text-base font-bold font-mono">{report.stats.titleLength}</div>
+              <div className="text-base font-bold font-mono">{safeStats.titleLength}</div>
             </div>
             <div className="rounded-lg border border-border bg-bg/50 p-2.5">
               <div className="text-xs text-text-muted">Meta Desc</div>
-              <div className="text-base font-bold font-mono">{report.stats.descriptionLength}</div>
+              <div className="text-base font-bold font-mono">{safeStats.descriptionLength}</div>
             </div>
           </div>
 
           {/* Detailed Tests List */}
           <div className="space-y-2">
-            {report.tests.map((test) => (
+            {safeTests.map((test) => (
               <div
                 key={test.id}
                 className={cn(

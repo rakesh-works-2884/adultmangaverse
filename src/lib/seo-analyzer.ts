@@ -27,25 +27,39 @@ export interface AnalyzeInput {
   focusKeyword?: string;
 }
 
-export function analyzeSeo(input: AnalyzeInput): SeoAnalysisReport {
-  const { title = "", seoTitle = "", seoDescription = "", synopsisOrContent = "", slug = "", focusKeyword = "" } = input;
+export function analyzeSeo(input?: AnalyzeInput): SeoAnalysisReport {
+  const fallbackReport: SeoAnalysisReport = {
+    score: 50,
+    rating: "ok",
+    tests: [],
+    stats: { wordCount: 0, keywordDensity: 0, titleLength: 0, descriptionLength: 0 },
+  };
 
-  const effectiveTitle = (seoTitle.trim() || title.trim()).toLowerCase();
-  const effectiveDesc = seoDescription.trim().toLowerCase();
-  const keyword = focusKeyword.trim().toLowerCase();
-  const contentText = stripHtmlTags(synopsisOrContent).toLowerCase();
-  const effectiveSlug = slug.trim().toLowerCase();
+  if (!input) return fallbackReport;
 
-  const words = contentText ? contentText.split(/\s+/).filter(Boolean) : [];
-  const wordCount = words.length;
+  try {
+    const { title = "", seoTitle = "", seoDescription = "", synopsisOrContent = "", slug = "", focusKeyword = "" } = input;
 
-  let keywordCount = 0;
-  if (keyword && wordCount > 0) {
-    const kwRegex = new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "gi");
-    const matches = contentText.match(kwRegex);
-    keywordCount = matches ? matches.length : 0;
-  }
-  const keywordDensity = wordCount > 0 && keyword ? Number(((keywordCount / wordCount) * 100).toFixed(2)) : 0;
+    const effectiveTitle = (seoTitle?.trim() || title?.trim() || "").toLowerCase();
+    const effectiveDesc = (seoDescription?.trim() || "").toLowerCase();
+    const keyword = (focusKeyword?.trim() || "").toLowerCase();
+    const contentText = stripHtmlTags(synopsisOrContent || "").toLowerCase();
+    const effectiveSlug = (slug?.trim() || "").toLowerCase();
+
+    const words = contentText ? contentText.split(/\s+/).filter(Boolean) : [];
+    const wordCount = words.length;
+
+    let keywordCount = 0;
+    if (keyword && wordCount > 0) {
+      try {
+        const kwRegex = new RegExp(`\\b${escapeRegExp(keyword)}\\b`, "gi");
+        const matches = contentText.match(kwRegex);
+        keywordCount = matches ? matches.length : 0;
+      } catch {
+        keywordCount = 0;
+      }
+    }
+    const keywordDensity = wordCount > 0 && keyword ? Number(((keywordCount / wordCount) * 100).toFixed(2)) : 0;
 
   const tests: SeoTestResult[] = [];
 
@@ -204,6 +218,10 @@ export function analyzeSeo(input: AnalyzeInput): SeoAnalysisReport {
       descriptionLength: rawDescLength,
     },
   };
+  } catch (err) {
+    console.error("[SEO ANALYZER] Exception:", err);
+    return fallbackReport;
+  }
 }
 
 function stripHtmlTags(html: string): string {
