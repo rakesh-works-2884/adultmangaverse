@@ -261,11 +261,58 @@ const STATIC_PAGES: { slug: string; title: string; contentHtml: string }[] = [
 ];
 
 async function seedStaticPages() {
+  const seoMeta: Record<string, { seoTitle: string; seoDescription: string; focusKeyword: string }> = {
+    about: {
+      seoTitle: "About Adult Manga Verse — Premium Adult Manga & Manhwa Reader",
+      seoDescription: "Learn about Adult Manga Verse, your ultimate platform for reading high-quality adult manga, manhwa, and manhua online for free with fast updates.",
+      focusKeyword: "About Adult Manga Verse",
+    },
+    contact: {
+      seoTitle: "Contact Us — Get in Touch with Adult Manga Verse Team",
+      seoDescription: "Have questions, feedback, or support inquiries? Contact the Adult Manga Verse team directly and get assistance with your account or reading experience.",
+      focusKeyword: "Contact Adult Manga Verse",
+    },
+    privacy: {
+      seoTitle: "Privacy Policy — Data & User Privacy at Adult Manga Verse",
+      seoDescription: "Read the official Privacy Policy of Adult Manga Verse. Learn how we protect your personal data, privacy, account security, and reading information.",
+      focusKeyword: "Adult Manga Verse Privacy Policy",
+    },
+    terms: {
+      seoTitle: "Terms of Service — User Agreement & Guidelines",
+      seoDescription: "Review the Terms of Service for Adult Manga Verse. Understand user eligibility, acceptable usage guidelines, subscriptions, and platform rules.",
+      focusKeyword: "Adult Manga Verse Terms of Service",
+    },
+    "content-policy": {
+      seoTitle: "Content Policy & Guidelines — Adult Manga Verse",
+      seoDescription: "Explore our strict 18+ Content Policy. Learn about content intensity ratings, community guidelines, prohibited material, and creator support.",
+      focusKeyword: "Adult Manga Verse Content Policy",
+    },
+    dmca: {
+      seoTitle: "DMCA & Copyright Takedown Policy — Adult Manga Verse",
+      seoDescription: "Official DMCA and Copyright Infringement policy for Adult Manga Verse. Instructions for rights holders to file takedown requests or counter-notices.",
+      focusKeyword: "Adult Manga Verse DMCA Policy",
+    },
+  };
+
   for (const p of STATIC_PAGES) {
+    const meta = seoMeta[p.slug] || {};
     await prisma.staticPage.upsert({
       where: { slug: p.slug },
-      update: { title: p.title, contentHtml: p.contentHtml },
-      create: { slug: p.slug, title: p.title, contentHtml: p.contentHtml },
+      update: {
+        title: p.title,
+        contentHtml: p.contentHtml,
+        seoTitle: meta.seoTitle,
+        seoDescription: meta.seoDescription,
+        focusKeyword: meta.focusKeyword,
+      },
+      create: {
+        slug: p.slug,
+        title: p.title,
+        contentHtml: p.contentHtml,
+        seoTitle: meta.seoTitle,
+        seoDescription: meta.seoDescription,
+        focusKeyword: meta.focusKeyword,
+      },
     });
   }
 }
