@@ -1,4 +1,31 @@
-import sharp, { type ResizeOptions } from "sharp";
+import type { ResizeOptions } from "sharp";
+
+/**
+ * sharp is a native module, loaded lazily and on first use only.
+ *
+ * A top-level `import sharp` is evaluated as soon as anything in this file's
+ * module graph is loaded — and Next.js bundles every Server Action reachable
+ * from a page into one chunk. That made a server whose sharp binaries are
+ * broken fail *unrelated* actions: saving a static page pulled in the rich-text
+ * editor's image-upload action, which pulled in this file, and the save died on
+ * a dlopen error it had nothing to do with. Deferring the import confines that
+ * failure to image processing, and reports it in words instead of a digest.
+ */
+let sharpModule: typeof import("sharp").default | undefined;
+
+async function getSharp() {
+  if (!sharpModule) {
+    try {
+      sharpModule = (await import("sharp")).default;
+    } catch (e) {
+      throw new Error(
+        "Image processing is unavailable: the sharp native module failed to load " +
+          `on this server (${(e as Error).message}).`,
+      );
+    }
+  }
+  return sharpModule;
+}
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB (Rules.md §4)
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -15,6 +42,7 @@ export type ProcessedImage = {
  * acts as the magic-byte check — it throws on non-image input.
  */
 async function processImageBuffer(input: Buffer, resize: ResizeOptions): Promise<ProcessedImage> {
+  const sharp = await getSharp();
   const pipeline = sharp(input, { failOn: "error" });
   const meta = await pipeline.metadata();
   if (!meta.width || !meta.height) {
