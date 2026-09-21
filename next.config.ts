@@ -40,6 +40,8 @@ function serverActionOrigins(): string[] {
 }
 
 const nextConfig: NextConfig = {
+  // Login Server Actions receive passwords; never print their arguments in dev.
+  logging: { serverFunctions: false },
   // Lean container output (Dockerfile copies .next/standalone).
   output: "standalone",
   poweredByHeader: false,

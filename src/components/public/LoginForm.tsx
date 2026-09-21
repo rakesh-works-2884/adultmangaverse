@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { loginSchema } from "@/lib/validators";
@@ -8,6 +10,8 @@ import { authInputWithIconClass } from "@/components/public/auth-styles";
 import { authenticateUser } from "@/actions/auth-actions";
 
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
+  const router = useRouter();
+  const { update, status } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -27,13 +31,23 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     }
 
     startTransition(async () => {
-      const res = await authenticateUser({
-        email: parsed.data.email,
-        password: parsed.data.password,
-        callbackUrl,
-      });
-      if (res && !res.ok) {
-        setError(res.error);
+      try {
+        const res = await authenticateUser({
+          email: parsed.data.email,
+          password: parsed.data.password,
+          callbackUrl,
+        });
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        // Server Actions set cookies but do not notify the mounted SessionProvider.
+        // Refresh it before navigating so the shared header updates immediately.
+        await update();
+        router.replace(res.redirectTo);
+        router.refresh();
+      } catch {
+        setError("Unable to sign in right now. Please try again.");
       }
     });
   }
@@ -97,7 +111,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || status === "loading"}
         className="btn-3d inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary font-ui text-sm font-semibold text-primary-foreground hover:bg-primary-hover active:scale-[0.97] disabled:opacity-60"
       >
         {pending ? <Loader2 className="size-4 animate-spin" /> : null}

@@ -147,10 +147,8 @@ export function SiteHeader({ genres = [] }: { genres?: HeaderGenre[] }) {
   const [open, setOpen] = useState(false);
   // Session is read client-side (not passed from the server layout) so that
   // the layout itself has no per-request dynamic dependency and public pages
-  // can be cached/ISR'd instead of fully re-rendering on every request. Cost:
-  // on first paint (before hydration resolves the session) this always shows
-  // the signed-out state — a brief, harmless flash for returning users.
-  const { data: session } = useSession();
+  // can be cached/ISR'd. Show a neutral placeholder while the session loads.
+  const { data: session, status } = useSession();
   const user: HeaderUser = session?.user
     ? { name: session.user.name, email: session.user.email, role: session.user.role }
     : null;
@@ -196,7 +194,9 @@ export function SiteHeader({ genres = [] }: { genres?: HeaderGenre[] }) {
           <Link href="/search" aria-label="Search" className="grid size-11 place-items-center rounded-lg text-text-muted transition-colors hover:bg-surface hover:text-foreground md:hidden">
             <Search className="size-5" strokeWidth={1.5} />
           </Link>
-          {user ? (
+          {status === "loading" ? (
+            <span role="status" aria-label="Loading account" className="h-10 w-20 animate-pulse rounded-lg bg-bg-soft" />
+          ) : user ? (
             <UserMenu user={user} />
           ) : (
             <Link
@@ -249,7 +249,7 @@ export function SiteHeader({ genres = [] }: { genres?: HeaderGenre[] }) {
                 Admin panel
               </Link>
             ) : null}
-            {user ? (
+            {status === "loading" ? null : user ? (
               <button
                 type="button"
                 onClick={async () => {

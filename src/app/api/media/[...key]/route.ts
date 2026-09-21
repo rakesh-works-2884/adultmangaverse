@@ -8,7 +8,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ key
   try {
     const url = await storage.getSignedUrl(key, 60);
     // This endpoint is for R2 artwork only; local uploads use /uploads directly.
-    if (!url.startsWith("https://")) return new Response("Not found", { status: 404 });
+    if (!url.startsWith("https://")) {
+      console.error("[MEDIA] R2 artwork requested while remote storage is not enabled.");
+      return new Response("Image storage is not configured", { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
     const response = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
     if (!response.ok) return new Response("Image unavailable", { status: 404 });
     return new Response(response.body, {

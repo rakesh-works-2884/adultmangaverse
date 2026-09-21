@@ -8,14 +8,16 @@ export async function authenticateUser(input: {
   email: string;
   password: string;
   callbackUrl?: string;
-}): Promise<{ ok: false; error: string } | void> {
+}): Promise<{ ok: false; error: string } | { ok: true; redirectTo: string }> {
   const targetUrl = safeRedirect(input.callbackUrl);
   try {
     await signIn("credentials", {
       email: input.email,
       password: input.password,
       redirectTo: targetUrl,
+      redirect: false,
     });
+    return { ok: true, redirectTo: targetUrl };
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {
@@ -25,6 +27,7 @@ export async function authenticateUser(input: {
           return { ok: false, error: "Invalid email or password." };
       }
     }
-    throw error; // Rethrow NEXT_REDIRECT so Next.js redirects cleanly
+    console.error("[AUTH] Sign-in failed:", error);
+    return { ok: false, error: "Unable to sign in right now. Please try again." };
   }
 }
