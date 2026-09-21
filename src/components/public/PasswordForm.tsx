@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { authInputClass } from "@/components/public/AuthCard";
+import { authInputClass } from "@/components/public/auth-styles";
 import { changePassword } from "@/actions/account";
 
 export function PasswordForm() {

@@ -14,7 +14,16 @@
 // network as usual; this worker only ever serves what was explicitly cached.
 
 const OFFLINE_CACHE = "amv-offline-v1";
-const RUNTIME_CACHE = "amv-runtime-v1";
+const RUNTIME_CACHE = "amv-runtime-v2";
+function allowedUrl(value, shell = false) {
+  try {
+    const url = new URL(value, self.location.origin);
+    if (url.origin !== self.location.origin) return false;
+    return shell
+      ? ["/offline", "/offline-reader"].includes(url.pathname) || url.pathname.startsWith("/_next/static/")
+      : url.pathname.startsWith("/api/img/") || url.pathname.startsWith("/uploads/") || url.pathname === "/_next/image";
+  } catch { return false; }
+}
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -31,7 +40,7 @@ self.addEventListener("message", (event) => {
     event.waitUntil(
       caches.open(OFFLINE_CACHE).then(async (cache) => {
         let done = 0;
-        for (const url of urls) {
+        for (const url of urls.filter((url) => allowedUrl(url))) {
           try {
             await cache.add(url);
           } catch {
@@ -53,7 +62,7 @@ self.addEventListener("message", (event) => {
         .open(RUNTIME_CACHE)
         .then((cache) =>
           Promise.all(
-            urls.map((url) =>
+            urls.filter((url) => allowedUrl(url, true)).map((url) =>
               fetch(url)
                 .then((res) => (res.ok ? cache.put(url, res) : null))
                 .catch(() => null),
@@ -70,6 +79,8 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
 
   const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  if (/^\/(admin|login|register|account)(\/|$)/.test(url.pathname) || (url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/img/"))) return;
   const isSelfRoutingDoc = url.pathname === "/offline" || url.pathname === "/offline-reader";
   const isShellAsset = url.pathname.startsWith("/_next/static/") || isSelfRoutingDoc;
 

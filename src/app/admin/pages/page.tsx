@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { ExternalLink, Pencil, Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -7,6 +9,7 @@ import { btnPrimary, btnGhost } from "@/components/admin/styles";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPagesPage() {
+  if (!(await requireAdmin())) redirect("/");
   const pages = await prisma.staticPage.findMany({ orderBy: { title: "asc" }, select: { id: true, title: true, slug: true, updatedAt: true } });
 
   return (

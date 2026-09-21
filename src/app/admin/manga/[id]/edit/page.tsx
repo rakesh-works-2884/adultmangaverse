@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -12,6 +14,7 @@ export default async function EditMangaPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!(await requireAdmin())) redirect("/");
   const { id } = await params;
   const [manga, genres] = await Promise.all([
     prisma.manga.findUnique({

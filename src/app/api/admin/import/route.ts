@@ -5,7 +5,7 @@ import { XMLParser } from "fast-xml-parser";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth-guards";
-import { storage } from "@/lib/storage";
+import { storage, checkStorageAccess, StorageError } from "@/lib/storage";
 import { processCoverBuffer, processChapterPageBuffer } from "@/lib/images";
 import { slugify, uniqueSlug } from "@/lib/slug";
 
@@ -121,13 +121,24 @@ export type ImportResult =
 export async function POST(req: Request) {
   if (!(await requireAdmin())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
-  const fd = await req.formData();
+  let fd: FormData;
+  try {
+    fd = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Could not read the upload. Please select the ZIP again and retry." }, { status: 400 });
+  }
   const file = fd.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json({ error: "No ZIP file provided." }, { status: 400 });
   }
   if (!file.name.toLowerCase().endsWith(".zip")) {
     return NextResponse.json({ error: "Please upload a .zip file." }, { status: 400 });
+  }
+
+  try {
+    await checkStorageAccess();
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof StorageError ? error.message : "Upload storage is temporarily unavailable." }, { status: 503 });
   }
 
   let zip: JSZip;
@@ -137,11 +148,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not read the ZIP file — is it corrupt?" }, { status: 400 });
   }
 
-  const allEntries = Object.values(zip.files).filter((e) => !e.dir);
+  const allEntries = Object.values(zip.files).filter((e) => !e.dir && !e.name.split("/").some((part) => part === "__MACOSX" || part.startsWith("._")));
   const xmlEntry = allEntries.find((e) => e.name.toLowerCase().endsWith(".xml"));
-  if (!xmlEntry) {
-    return NextResponse.json({ error: "No .xml metadata file found in the ZIP." }, { status: 400 });
-  }
+
   const imageEntries = allEntries.filter((e) => IMAGE_EXT.test(e.name)).sort((a, b) => naturalCompare(a.name, b.name));
   if (imageEntries.length === 0) {
     return NextResponse.json({ error: "No page images found in the ZIP." }, { status: 400 });
@@ -149,9 +158,15 @@ export async function POST(req: Request) {
 
   let meta: ParsedMeta;
   try {
-    meta = parseComicInfoXml(await xmlEntry.async("string"));
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Could not parse the XML file." }, { status: 400 });
+    meta = xmlEntry ? parseComicInfoXml(await xmlEntry.async("string")) : { title: file.name.replace(/\.zip$/i, "").trim(), genres: [] };
+    const titleOverride = fd.get("title");
+    if (typeof titleOverride === "string" && titleOverride.trim()) meta.title = titleOverride.trim();
+  } catch {
+    return NextResponse.json({ error: "Could not read the XML metadata. Check that it is valid and includes a <Title>." }, { status: 400 });
+  }
+
+  if (!meta.title || meta.title.length > 300) {
+    return NextResponse.json({ error: "Enter a title between 1 and 300 characters." }, { status: 400 });
   }
 
   const result = await importChapter(meta, imageEntries);
@@ -254,6 +269,6 @@ async function importChapter(meta: ParsedMeta, imageEntries: JSZip.JSZipObject[]
     return { ok: true, mode, id: mangaId, title, slug, chapter: nextChapterNumber, pages: pageRows.length };
   } catch (e) {
     console.error("[IMPORT] failed:", e);
-    return { ok: false, error: e instanceof Error ? e.message : "Import failed." };
+    return { ok: false, error: e instanceof StorageError ? e.message : "Import failed. Please retry or ask the site administrator to check the server logs." };
   }
 }

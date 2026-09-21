@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import type { ActionResult } from "@/lib/actions";
 
 export async function toggleBookmark(mangaId: string): Promise<ActionResult<{ bookmarked: boolean }>> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in to bookmark." };
 
   try {

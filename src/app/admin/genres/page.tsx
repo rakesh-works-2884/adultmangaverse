@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
 import { GenreManager, type GenreRow } from "@/components/admin/GenreManager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminGenresPage() {
+  if (!(await requireAdmin())) redirect("/");
   const genres = await prisma.genre.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { manga: true } } },

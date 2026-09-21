@@ -70,7 +70,7 @@
   --color-intensity-moderate: var(--intensity-moderate);
 
   /* ── fonts ── */
-  --font-sans: var(--font-roboto);
+  --font-sans: var(--font-inter);
   --font-heading: var(--font-montserrat);
   --font-ui: var(--font-inter);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -465,4 +465,13 @@
     transform: none;
     transition: none;
   }
+}
+
+/* Consistent keyboard navigation and calm, readable surfaces. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--highlight);
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

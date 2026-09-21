@@ -18,6 +18,7 @@ export function SearchBar() {
 
   useEffect(() => {
     const q = query.trim();
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       if (q.length < 2) {
         setResults([]);
@@ -26,16 +27,17 @@ export function SearchBar() {
       }
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+        if (!res.ok) throw new Error("Search unavailable");
         const data = await res.json();
-        setResults(Array.isArray(data.results) ? data.results : []);
+        if (!controller.signal.aborted) setResults(Array.isArray(data.results) ? data.results : []);
       } catch {
-        setResults([]);
+        if (!controller.signal.aborted) setResults([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }, 250);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); controller.abort(); };
   }, [query]);
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export function SearchBar() {
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
         <input
           value={query}
+          maxLength={120}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Search titles, artists…"

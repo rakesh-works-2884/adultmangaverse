@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { ExternalLink, Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -7,6 +9,7 @@ import { btnPrimary } from "@/components/admin/styles";
 export const dynamic = "force-dynamic";
 
 export default async function AdminBlogsPage() {
+  if (!(await requireAdmin())) redirect("/");
   const posts = await prisma.blog.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, title: true, slug: true, published: true, publishedAt: true },

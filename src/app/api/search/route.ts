@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,10 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const q = (new URL(req.url).searchParams.get("q") ?? "").trim();
   if (q.length < 2) return NextResponse.json({ results: [] });
+  if (q.length > 120) return NextResponse.json({ results: [] }, { status: 400 });
+  if (!rateLimit(`search:${await clientIp()}`, 120, 60_000)) {
+    return NextResponse.json({ results: [] }, { status: 429, headers: { "Retry-After": "60", "Cache-Control": "no-store" } });
+  }
 
   const results = await prisma.manga.findMany({
     where: {

@@ -1,8 +1,11 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { StaticPageForm } from "@/components/admin/StaticPageForm";
 
-export default function NewStaticPage() {
+export default async function NewStaticPage() {
+  if (!(await requireAdmin())) redirect("/");
   return (
     <div className="space-y-6">
       <div>

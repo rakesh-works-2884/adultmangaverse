@@ -57,7 +57,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
     <section className="relative overflow-hidden rounded-2xl border border-border bg-bg-soft">
       {/* Full-bleed hero image — fills the whole carousel, no separate poster thumbnail. */}
       {heroImage ? (
-        <Image key={heroImage} src={heroImage} alt={active.title} fill sizes="100vw" className="object-cover" priority />
+        <Image key={heroImage} src={heroImage} alt={active.title} fill sizes="(max-width: 1280px) 100vw, 1280px" className="object-cover" priority={index === 0} />
       ) : null}
       {/* Red glow accents */}
       <div aria-hidden className="pointer-events-none absolute -left-24 -top-28 size-80 rounded-full bg-primary/25 blur-3xl" />
@@ -70,7 +70,7 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         <div className="flex flex-wrap items-center gap-2">
           <IntensityBadge intensity={active.intensity} />
         </div>
-        <h1 className="max-w-2xl font-heading text-2xl font-bold leading-tight sm:text-4xl">{active.title}</h1>
+        <h2 className="max-w-2xl font-heading text-2xl font-bold leading-tight sm:text-4xl">{active.title}</h2>
         {active.blurb ? (
           <p className="line-clamp-3 max-w-xl text-sm text-text-muted sm:text-base">{active.blurb}</p>
         ) : null}
@@ -90,8 +90,9 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
                 key={s.slug}
                 type="button"
                 aria-label={`Show ${s.title}`}
+                aria-pressed={i === index}
                 onClick={() => setIndex(i)}
-                className={cn("h-1.5 rounded-full transition-all", i === index ? "w-6 bg-primary" : "w-1.5 bg-white/30 hover:bg-white/50")}
+                className={cn("h-6 rounded-full border-8 border-bg transition-colors", i === index ? "w-10 bg-primary" : "w-6 bg-white/30 hover:bg-white/50")}
               />
             ))}
           </div>

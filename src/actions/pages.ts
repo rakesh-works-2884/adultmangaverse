@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth-guards";
 import { pdf } from "pdf-to-img";
@@ -17,13 +18,14 @@ export type UploadedPage = {
   height: number;
 };
 
-async function revalidateReader(chapterId: string) {
-  const chapter = await prisma.chapter.findUnique({
+async function revalidateReader(chapterId: string, knownSlug?: string) {
+  const chapter = knownSlug ? null : await prisma.chapter.findUnique({
     where: { id: chapterId },
     select: { manga: { select: { slug: true } } },
   });
   revalidatePath(`/admin/chapters/${chapterId}/pages`);
-  if (chapter) revalidatePath(`/manga/${chapter.manga.slug}`);
+  const slug = knownSlug ?? chapter?.manga.slug;
+  if (slug) revalidatePath(`/manga/${slug}`, "layout");
 }
 
 /** Upload a single page image (called sequentially per file so the client can show progress). */
@@ -36,15 +38,12 @@ export async function uploadChapterPage(chapterId: string, fd: FormData): Promis
   }
 
   try {
-    const chapter = await prisma.chapter.findUnique({
+    const [chapter, agg, processed] = await Promise.all([prisma.chapter.findUnique({
       where: { id: chapterId },
       select: { number: true, manga: { select: { slug: true } } },
-    });
+    }), prisma.page.aggregate({ where: { chapterId }, _max: { index: true } }), processChapterPage(file)]);
     if (!chapter) return { ok: false, error: "Chapter not found." };
 
-    const processed = await processChapterPage(file);
-
-    const agg = await prisma.page.aggregate({ where: { chapterId }, _max: { index: true } });
     const nextIndex = (agg._max.index ?? -1) + 1;
 
     const rand = Math.random().toString(36).slice(2, 8);
@@ -55,12 +54,12 @@ export async function uploadChapterPage(chapterId: string, fd: FormData): Promis
       data: { chapterId, index: nextIndex, imageUrl: storedKey, width: processed.width, height: processed.height },
     });
 
-    await revalidateReader(chapterId);
+    await revalidateReader(chapterId, chapter.manga.slug);
     const signedUrl = await signPageUrl(storedKey);
     return { ok: true, data: { id: page.id, index: page.index, imageUrl: signedUrl, width: page.width, height: page.height } };
   } catch (e) {
     console.error("[PAGE] upload failed:", e);
-    return { ok: false, error: e instanceof Error ? e.message : "Could not upload page." };
+    return { ok: false, error: "Could not upload page. Check the image format and size, then retry." };
   }
 }
 
@@ -100,11 +99,11 @@ export async function uploadChapterPdf(chapterId: string, fd: FormData): Promise
       nextIndex += 1;
     }
 
-    await revalidateReader(chapterId);
+    await revalidateReader(chapterId, chapter.manga.slug);
     return { ok: true, data: created };
   } catch (e) {
     console.error("[PAGE] pdf upload failed:", e);
-    return { ok: false, error: e instanceof Error ? e.message : "Could not process the PDF." };
+    return { ok: false, error: "Could not process the PDF. Please check the file and retry." };
   }
 }
 
@@ -143,14 +142,19 @@ export async function deletePage(pageId: string): Promise<ActionResult> {
   if (!(await requireStaff())) return { ok: false, error: "Not authorized." };
 
   try {
-    const page = await prisma.page.findUnique({ where: { id: pageId }, select: { imageUrl: true, chapterId: true } });
+    const page = await prisma.page.findUnique({ where: { id: pageId }, select: { imageUrl: true, chapterId: true, chapter: { select: { manga: { select: { slug: true } } } } } });
     if (!page) return { ok: false, error: "Page not found." };
 
     await prisma.page.delete({ where: { id: pageId } });
 
-    await storage.remove(page.imageUrl, "protected");
+    // The page is already removed from the reader. Clean up its object after
+    // responding, so storage latency does not hold up the admin interface.
+    after(async () => {
+      try { await storage.remove(page.imageUrl, "protected"); }
+      catch { console.error("[PAGE] storage cleanup failed"); }
+    });
 
-    await revalidateReader(page.chapterId);
+    await revalidateReader(page.chapterId, page.chapter.manga.slug);
     return { ok: true };
   } catch (e) {
     console.error("[PAGE] delete failed:", e);

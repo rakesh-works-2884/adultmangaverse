@@ -1,16 +1,19 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { siteConfig } from "@/lib/site";
 import { createInvoice } from "@/lib/nowpayments";
 import { priceFor, PAYMENT_DURATIONS, type PaymentDuration } from "@/lib/pricing";
 import type { ActionResult } from "@/lib/actions";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function createCryptoPayment(tier: "PREMIUM" | "VIP", months: number): Promise<ActionResult<{ invoiceUrl: string }>> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in first." };
+  if (tier !== "PREMIUM" && tier !== "VIP") return { ok: false, error: "Invalid plan." };
   if (!PAYMENT_DURATIONS.includes(months as PaymentDuration)) return { ok: false, error: "Invalid duration." };
+  if (!rateLimit(`checkout:${session.user.id}`, 5, 60_000)) return { ok: false, error: "Please wait a minute before starting another checkout." };
 
   const amountUsd = priceFor(tier, months);
 

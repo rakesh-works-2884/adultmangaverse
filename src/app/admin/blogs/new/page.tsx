@@ -1,8 +1,11 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { BlogForm } from "@/components/admin/BlogForm";
 
-export default function NewBlogPage() {
+export default async function NewBlogPage() {
+  if (!(await requireAdmin())) redirect("/");
   return (
     <div className="space-y-6">
       <div>

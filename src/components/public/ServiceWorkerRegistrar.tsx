@@ -9,6 +9,10 @@ const WARM_KEY = "amv_shell_warmed_at";
 /** Registers the offline-reading service worker once per page load (site-wide, no visible UI). */
 export function ServiceWorkerRegistrar() {
   useEffect(() => {
+    // Offline downloads register and warm the shell when requested. Avoid
+    // competing with the initial page and caching development bundles.
+    if (process.env.NODE_ENV !== "production") return;
+    const timer = window.setTimeout(() => {
     registerServiceWorker();
 
     try {
@@ -19,6 +23,8 @@ export function ServiceWorkerRegistrar() {
       /* ignore — worst case we just warm the shell a bit more often */
     }
     void warmOfflineShell();
+    }, 5000);
+    return () => window.clearTimeout(timer);
   }, []);
   return null;
 }

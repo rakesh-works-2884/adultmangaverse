@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import { getSettings } from "@/lib/settings";
 import { SeoSettingsForm } from "@/components/admin/SeoSettingsForm";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSeoPage() {
+  if (!(await requireAdmin())) redirect("/");
   const settings = await getSettings();
   return (
     <div className="space-y-6">

@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
 import { registerSchema } from "@/lib/validators";
 import { requestSignupOtp, verifySignupOtpAndRegister } from "@/actions/otp";
-import { authInputWithIconClass } from "@/components/public/AuthCard";
+import { authInputWithIconClass } from "@/components/public/auth-styles";
 import { OtpInput } from "@/components/public/OtpInput";
 
 const RESEND_COOLDOWN = 60;

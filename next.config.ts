@@ -15,6 +15,9 @@ function r2RemotePatterns() {
 const nextConfig: NextConfig = {
   // Lean container output (Dockerfile copies .next/standalone).
   output: "standalone",
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  distDir: process.env.NEXT_BUILD_DIR || ".next",
   // sharp ships a native .node with sibling DLLs; bundling it via Turbopack
   // breaks the Windows loader (ERR_DLOPEN_FAILED). Keep it external so Next
   // requires it normally at runtime. Same for the Prisma driver adapter.

@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import type { ActionResult } from "@/lib/actions";
 import { offlineLimitFor, type OfflineManga } from "@/lib/offline-types";
 import { signPages, OFFLINE_TTL_SECONDS } from "@/lib/image-urls";
@@ -10,18 +10,21 @@ export type OfflineUsage = { tier: string; limit: number | null; used: number; a
 
 /** Current user's offline-save tier, limit, and usage — drives the OfflineButton UI. */
 export async function getOfflineUsage(): Promise<OfflineUsage | null> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { tier: true } });
+  const [user, used] = await Promise.all([
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { tier: true, tierUntil: true } }),
+    prisma.offlineSave.count({ where: { userId: session.user.id } }),
+  ]);
   if (!user) return null;
-  const limit = offlineLimitFor(user.tier);
-  const used = await prisma.offlineSave.count({ where: { userId: session.user.id } });
-  return { tier: user.tier, limit, used, allowed: limit === null || limit > 0 };
+  const tier = user.tierUntil && user.tierUntil <= new Date() ? "FREE" : user.tier;
+  const limit = offlineLimitFor(tier);
+  return { tier, limit, used, allowed: limit === null || limit > 0 };
 }
 
 /** Titles the user has saved offline — shown on /library so they can jump to /offline. */
 export async function listOfflineSaves(): Promise<{ mangaId: string; slug: string; title: string; coverUrl: string | null }[]> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return [];
   const rows = await prisma.offlineSave.findMany({
     where: { userId: session.user.id },
@@ -38,12 +41,12 @@ export async function listOfflineSaves(): Promise<{ mangaId: string; slug: strin
  * list of image URLs for the Service Worker to fetch into Cache Storage.
  */
 export async function saveOffline(mangaId: string): Promise<ActionResult<{ manga: OfflineManga; imageUrls: string[] }>> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in." };
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { tier: true } });
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { tier: true, tierUntil: true } });
   if (!user) return { ok: false, error: "Please sign in." };
-  const limit = offlineLimitFor(user.tier);
+  const limit = offlineLimitFor(user.tierUntil && user.tierUntil <= new Date() ? "FREE" : user.tier);
   if (limit === 0) return { ok: false, error: "Offline reading is a Premium/VIP perk. Upgrade to save titles offline." };
 
   const existing = await prisma.offlineSave.findUnique({
@@ -118,7 +121,7 @@ export async function saveOffline(mangaId: string): Promise<ActionResult<{ manga
 
 /** Remove a title from offline saves. Returns the image URLs so the client can evict them from Cache Storage. */
 export async function removeOffline(mangaId: string): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in." };
   try {
     await prisma.offlineSave.deleteMany({ where: { userId: session.user.id, mangaId } });

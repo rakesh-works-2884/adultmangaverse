@@ -7,6 +7,7 @@ import type { ImportResult } from "@/app/api/admin/import/route";
 
 export function BulkImportForm() {
   const [file, setFile] = useState<File | null>(null);
+  const [title, setTitle] = useState("");
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +33,7 @@ export function BulkImportForm() {
     try {
       const fd = new FormData();
       fd.set("file", file);
+      if (title.trim()) fd.set("title", title.trim());
       const res = await fetch("/api/admin/import", { method: "POST", body: fd });
       const body = await res.json();
       if (!res.ok) {
@@ -52,9 +54,16 @@ export function BulkImportForm() {
         <input
           type="file"
           accept=".zip"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          aria-label="Chapter ZIP file"
+          disabled={pending}
+          onChange={(e) => { setFile(e.target.files?.[0] ?? null); setTitle(""); setError(null); setResult(null); }}
           className="text-sm text-text-muted file:mr-3 file:h-9 file:rounded-lg file:border file:border-border file:bg-bg-soft file:px-3 file:text-sm file:font-medium file:text-foreground"
         />
+        <div className="w-full space-y-2">
+          <label htmlFor="import-title" className="text-sm font-medium">Title override (optional)</label>
+          <input id="import-title" value={title} onChange={(e) => setTitle(e.target.value)} disabled={pending} maxLength={300} placeholder={file?.name.replace(/\.zip$/i, "") || "Enter a title"} className="h-11 w-full rounded-lg border border-border bg-bg px-3 text-sm" aria-describedby="import-title-help" />
+          <p id="import-title-help" className="text-xs text-text-muted">XML is optional. Leave this blank to use the XML title, or the ZIP filename when there is no XML. A matching title adds the next chapter.</p>
+        </div>
         <button
           type="submit"
           disabled={!file || pending}
@@ -67,7 +76,7 @@ export function BulkImportForm() {
         {pending ? <span className="text-xs text-text-muted">Large ZIPs can take a few minutes — this is re-encoding and uploading every page, don&apos;t close the tab.</span> : null}
       </form>
 
-      {error ? <p className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p> : null}
 
       {result ? (
         <div className={`rounded-xl border px-4 py-3 text-sm ${result.ok ? "border-success/40 bg-success/10 text-success" : "border-danger/40 bg-danger/10 text-danger"}`}>

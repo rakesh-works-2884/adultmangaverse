@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import { safeRedirect } from "@/lib/safe-redirect";
 import { loginSchema } from "@/lib/validators";
-import { authInputWithIconClass } from "@/components/public/AuthCard";
+import { authInputWithIconClass } from "@/components/public/auth-styles";
 
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   const router = useRouter();
@@ -29,6 +30,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     }
 
     startTransition(async () => {
+      try {
       const res = await signIn("credentials", {
         email: parsed.data.email,
         password: parsed.data.password,
@@ -38,15 +40,18 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         setError("Invalid email or password.");
         return;
       }
-      router.push(callbackUrl || "/");
+      router.push(safeRedirect(callbackUrl));
       router.refresh();
+      } catch {
+        setError("Unable to sign in right now. Please try again.");
+      }
     });
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       {error ? (
-        <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+        <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
           {error}
         </p>
       ) : null}

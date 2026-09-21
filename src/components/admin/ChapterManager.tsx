@@ -37,6 +37,16 @@ export function ChapterManager({ mangaId, mangaTitle, chapters }: { mangaId: str
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [activity, setActivity] = useState("");
+  const [notice, setNotice] = useState("");
+  function runAction(label: string, action: () => Promise<void>) {
+    if (pending) return;
+    setActivity(label); setNotice(""); setError(null);
+    startTransition(async () => {
+      try { await action(); }
+      catch { setError("Could not complete the action. Please retry."); }
+    });
+  }
 
   function resetForm() {
     setForm(emptyForm);
@@ -74,17 +84,18 @@ export function ChapterManager({ mangaId, mangaTitle, chapters }: { mangaId: str
     setError(null);
     const payload = buildPayload();
     if ("error" in payload) return setError(payload.error);
-    startTransition(async () => {
+    runAction(editingId ? "Saving chapter…" : "Adding chapter…", async () => {
       const res = editingId ? await updateChapter(editingId, payload) : await createChapter(mangaId, payload);
       if (!res.ok) return setError(res.error);
       resetForm();
+      setNotice("Changes saved.");
       router.refresh();
     });
   }
 
   function quickPublishToggle(c: ChapterRow) {
     const published = c.publishedAt && new Date(c.publishedAt) <= new Date();
-    startTransition(async () => {
+    runAction("Updating chapter visibility…", async () => {
       const res = await updateChapter(c.id, {
         number: Number(c.number),
         title: c.title ?? undefined,
@@ -92,21 +103,24 @@ export function ChapterManager({ mangaId, mangaTitle, chapters }: { mangaId: str
         publishedAt: published ? null : new Date().toISOString(),
       });
       if (!res.ok) return setError(res.error);
+      setNotice("Changes saved.");
       router.refresh();
     });
   }
 
   function remove(c: ChapterRow) {
     if (!confirm(`Delete chapter ${c.number}${c.title ? ` — ${c.title}` : ""} and its ${c.pagesCount} page(s)?`)) return;
-    startTransition(async () => {
+    runAction("Deleting chapter and pages…", async () => {
       const res = await deleteChapter(c.id);
       if (!res.ok) return setError(res.error);
+      setNotice("Changes saved.");
       router.refresh();
     });
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" aria-busy={pending}>
+      <div role="status" aria-live="polite">{pending || notice ? <p className="flex items-center gap-2 rounded-lg border border-border bg-surface p-3 text-sm">{pending ? <Loader2 className="size-4 animate-spin text-primary" /> : null}{pending ? activity : notice}</p> : null}</div>
       {/* Add / edit form */}
       <form onSubmit={submit} className="space-y-4 rounded-xl border border-border bg-surface p-4">
         <h2 className="font-heading text-sm font-semibold">{editingId ? "Edit chapter" : "Add chapter"}</h2>

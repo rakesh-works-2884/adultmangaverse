@@ -13,6 +13,7 @@ const FROM = process.env.EMAIL_FROM || "Adult Manga Verse <onboarding@resend.dev
 export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }): Promise<void> {
   const res = await fetch(RESEND_API, {
     method: "POST",
+    signal: AbortSignal.timeout(15_000),
     headers: { Authorization: `Bearer ${apiKey()}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: FROM, to: [to], subject, html }),
   });

@@ -44,7 +44,7 @@ function GenresDropdown({ genres }: { genres: HeaderGenre[] }) {
       {open ? (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
-          <div role="menu" className="glass-panel absolute left-0 z-50 mt-2 grid w-[440px] max-w-[90vw] grid-cols-2 gap-0.5 rounded-xl p-2 shadow-[0_8px_32px_rgb(0_0_0/0.5)]">
+          <div role="menu" className="border border-border bg-surface absolute left-0 z-50 mt-2 grid w-[440px] max-w-[90vw] grid-cols-2 gap-0.5 rounded-xl p-2 shadow-[0_8px_32px_rgb(0_0_0/0.5)]">
             {genres.length === 0 ? (
               <p className="col-span-2 px-3 py-2 text-sm text-text-muted">No genres yet.</p>
             ) : (
@@ -108,7 +108,7 @@ function UserMenu({ user }: { user: NonNullable<HeaderUser> }) {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
           <div
             role="menu"
-            className="glass-panel absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl p-1 shadow-[0_8px_32px_rgb(0_0_0/0.5)]"
+            className="border border-border bg-surface absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-xl p-1 shadow-[0_8px_32px_rgb(0_0_0/0.5)]"
           >
             <div className="border-b border-border px-3 py-2">
               <p className="truncate text-sm font-medium">{user.name || "Reader"}</p>
@@ -154,7 +154,7 @@ export function SiteHeader({ genres = [] }: { genres?: HeaderGenre[] }) {
   const isStaff = user && (user.role === "ADMIN" || user.role === "MOD");
 
   return (
-    <header className="glass-panel sticky top-0 z-50 border-x-0 border-t-0 shadow-[0_1px_0_0_rgb(225_29_46/0.12)]">
+    <header className="border border-border bg-surface sticky top-0 z-50 border-x-0 border-t-0 shadow-[0_1px_0_0_rgb(225_29_46/0.12)]">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <button

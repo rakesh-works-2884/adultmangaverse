@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import type { ActionResult } from "@/lib/actions";
 import { signPages } from "@/lib/image-urls";
 
@@ -18,16 +18,11 @@ import { signPages } from "@/lib/image-urls";
 export async function getChapterPages(chapterId: string): Promise<{ id: string; imageUrl: string; width: number; height: number }[]> {
   const chapter = await prisma.chapter.findFirst({
     where: { id: chapterId, publishedAt: { not: null, lte: new Date() }, manga: { published: true } },
-    select: { id: true },
+    select: { pages: { orderBy: { index: "asc" }, select: { id: true, imageUrl: true, width: true, height: true } } },
   });
   if (!chapter) return [];
 
-  const rawPages = await prisma.page.findMany({
-    where: { chapterId },
-    orderBy: { index: "asc" },
-    select: { id: true, imageUrl: true, width: true, height: true },
-  });
-  return signPages(rawPages);
+  return signPages(chapter.pages);
 }
 
 /** Fire-and-forget view increments (client calls once per session). */
@@ -49,8 +44,13 @@ export async function recordChapterView(chapterId: string): Promise<void> {
 
 /** Save reading progress for logged-in users. Guests persist to localStorage client-side. */
 export async function saveProgress(mangaId: string, chapterId: string): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Not logged in." };
+  const chapter = await prisma.chapter.findFirst({
+    where: { id: chapterId, mangaId, publishedAt: { not: null, lte: new Date() }, manga: { published: true } },
+    select: { id: true },
+  });
+  if (!chapter) return { ok: false, error: "Chapter not found." };
   try {
     await prisma.readProgress.upsert({
       where: { userId_mangaId: { userId: session.user.id, mangaId } },

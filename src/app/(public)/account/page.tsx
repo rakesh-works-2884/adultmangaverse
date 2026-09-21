@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Crown, KeyRound, Receipt, UserRound } from "lucide-react";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
 import { ProfileForm } from "@/components/public/ProfileForm";
 import { PasswordForm } from "@/components/public/PasswordForm";
@@ -35,7 +35,7 @@ function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType;
 }
 
 export default async function AccountPage() {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) redirect("/login?callbackUrl=/account");
 
   const [user, payments] = await Promise.all([

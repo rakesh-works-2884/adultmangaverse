@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { requireStaff } from "@/lib/auth-guards";
 import { commentSchema } from "@/lib/validators";
 import type { ActionResult } from "@/lib/actions";
@@ -13,7 +13,7 @@ export async function postComment(input: {
   chapterId?: string;
   body: string;
 }): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in to comment." };
   if (!input.mangaId && !input.chapterId) return { ok: false, error: "Nothing to comment on." };
 

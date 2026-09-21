@@ -30,6 +30,7 @@ export type CreateInvoiceResult = { id: string; invoiceUrl: string };
 export async function createInvoice(input: CreateInvoiceInput): Promise<CreateInvoiceResult> {
   const res = await fetch(`${API_BASE}/invoice`, {
     method: "POST",
+    signal: AbortSignal.timeout(15_000),
     headers: { "x-api-key": apiKey(), "Content-Type": "application/json" },
     body: JSON.stringify({
       price_amount: input.priceAmount,

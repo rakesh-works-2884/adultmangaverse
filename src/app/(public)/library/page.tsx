@@ -3,7 +3,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ArrowUpRight, BookOpen, Heart, WifiOff } from "lucide-react";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
 import { cardSelect } from "@/lib/catalog";
 import { MangaCard } from "@/components/public/MangaCard";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My Library", robots: { index: false } };
 
 export default async function LibraryPage() {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) redirect("/login?callbackUrl=/library");
 
   const [bookmarks, progress, offlineUsage] = await Promise.all([

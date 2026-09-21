@@ -16,13 +16,13 @@ export type MangaCardData = {
 export function MangaCard({ manga }: { manga: MangaCardData }) {
   return (
     <Link href={`/manga/${manga.slug}`} className="group block">
-      <div className="shine-surface shine-hover tilt-card relative aspect-[2/3] overflow-hidden rounded-lg border border-border bg-surface shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06)] group-hover:border-primary/50">
+      <div className=" relative aspect-[2/3] overflow-hidden rounded-xl border border-border bg-surface shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06)] group-hover:border-primary/50">
         {manga.coverUrl ? (
           <Image
             src={manga.coverUrl}
             alt={`${manga.title} cover`}
             fill
-            sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 16vw"
+            sizes="(max-width: 479px) 50vw, (max-width: 639px) 33vw, (max-width: 1023px) 25vw, (max-width: 1280px) 16vw, 200px"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
@@ -40,9 +40,10 @@ export function MangaCard({ manga }: { manga: MangaCardData }) {
         </div>
       </div>
 
-      <h3 className="mt-1.5 line-clamp-2 font-heading text-sm font-semibold leading-tight text-foreground transition-colors group-hover:text-highlight">
+      <h3 className="mt-3 line-clamp-2 font-heading text-sm font-semibold leading-tight text-foreground transition-colors group-hover:text-highlight">
         {manga.title}
       </h3>
+      <p className="mt-1 text-[11px] uppercase tracking-wider text-text-muted">{manga.type.toLowerCase()}</p>
     </Link>
   );
 }
@@ -50,7 +51,7 @@ export function MangaCard({ manga }: { manga: MangaCardData }) {
 export function MangaCardSkeleton() {
   return (
     <div>
-      <div className="aspect-[2/3] animate-pulse rounded-lg border border-border bg-surface" />
+      <div className="aspect-[2/3] animate-pulse rounded-xl border border-border bg-surface" />
       <div className="mt-1.5 h-3 w-3/4 animate-pulse rounded bg-surface" />
     </div>
   );

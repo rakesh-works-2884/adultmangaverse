@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, Search, Star } from "lucide-react";
@@ -27,6 +29,7 @@ export default async function AdminMangaListPage({
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
+  if (!(await requireAdmin())) redirect("/");
   const { q, page } = await searchParams;
   const query = (q ?? "").trim();
   const currentPage = Math.max(1, Number(page) || 1);

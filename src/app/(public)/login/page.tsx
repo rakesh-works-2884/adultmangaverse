@@ -1,3 +1,4 @@
+import { safeRedirect } from "@/lib/safe-redirect";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -18,8 +19,9 @@ export default async function LoginPage({
   searchParams: Promise<{ callbackUrl?: string; reset?: string }>;
 }) {
   const { callbackUrl, reset } = await searchParams;
+  const destination = safeRedirect(callbackUrl);
   const session = await auth();
-  if (session) redirect(callbackUrl || "/");
+  if (session) redirect(destination);
 
   return (
     <AuthCard
@@ -39,7 +41,7 @@ export default async function LoginPage({
           Password updated. Sign in with your new password.
         </p>
       ) : null}
-      <LoginForm callbackUrl={callbackUrl || "/"} />
+      <LoginForm callbackUrl={destination} />
     </AuthCard>
   );
 }

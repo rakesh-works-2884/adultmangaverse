@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Columns, Loader2, ScrollText, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Columns, Loader2, ScrollText, X, ZoomIn, ZoomOut, Maximize, Minimize, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveProgress, recordChapterView, getChapterPages } from "@/actions/reader";
 
@@ -34,9 +34,31 @@ export function ReaderView({
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastScroll = useRef(0);
+  const [showControls, setShowControls] = useState(true);
+  const [zoom, setZoom] = useState(1);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [displayMessage, setDisplayMessage] = useState("");
+  function changeZoom(delta: number) {
+    setZoom(value => Math.max(0.5, Math.min(3, Math.round((value + delta) * 100) / 100)));
+    setShowControls(true);
+  }
+  async function toggleFullscreen() {
+    setDisplayMessage("");
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (scrollRef.current?.requestFullscreen) await scrollRef.current.requestFullscreen();
+      else setDisplayMessage("Fullscreen is not supported by this browser. The reader already fills the page.");
+    } catch { setDisplayMessage("Fullscreen is unavailable in this browser or embedded view. Try opening the reader in a browser tab."); }
+  }
+  useEffect(() => {
+    const onFullscreen = () => { setFullscreen(document.fullscreenElement === scrollRef.current); setShowControls(true); };
+    document.addEventListener("fullscreenchange", onFullscreen);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("fullscreenchange", onFullscreen); document.body.style.overflow = previousOverflow; };
+  }, []);
   const [mode, setMode] = useState<"vertical" | "paged">("vertical");
   const [pageIdx, setPageIdx] = useState(0);
-  const [showControls, setShowControls] = useState(true);
   // Signed image URLs can't live in the page's own (cacheable) render — see
   // getChapterPages for why — so this component fetches them itself right
   // after mounting. Result is tagged with the chapterId it was fetched for,
@@ -83,6 +105,12 @@ export function ReaderView({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(e.target.tagName))) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "+" || e.key === "=") { e.preventDefault(); changeZoom(0.25); return; }
+      if (e.key === "-") { e.preventDefault(); changeZoom(-0.25); return; }
+      if (e.key === "0") { setZoom(1); setShowControls(true); return; }
+      if (e.key.toLowerCase() === "f") { e.preventDefault(); void toggleFullscreen(); return; }
       if (mode === "paged") {
         if (e.key === "ArrowRight") nextPage();
         if (e.key === "ArrowLeft") prevPage();
@@ -101,6 +129,7 @@ export function ReaderView({
     if (!el) return;
     const onScroll = () => {
       const y = el.scrollTop;
+      if (y === lastScroll.current) return;
       setShowControls(y < lastScroll.current || y < 120);
       lastScroll.current = y;
     };
@@ -112,8 +141,9 @@ export function ReaderView({
     <div
       ref={scrollRef}
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed inset-0 z-50 select-none overflow-y-auto bg-reader"
+      className="fixed inset-0 z-50 select-none overflow-auto bg-reader"
     >
+      {!showControls ? <button type="button" onClick={() => setShowControls(true)} aria-label="Show reader controls" className="fixed right-3 top-3 z-[70] grid size-11 place-items-center rounded-xl border border-white/20 bg-black text-white"><Settings2 className="size-5" /></button> : null}
       {/* Top bar */}
       <div className={cn("fixed inset-x-0 top-0 z-[60] border-b border-white/10 bg-black/80 backdrop-blur-xl transition-transform", showControls ? "translate-y-0" : "-translate-y-full")}>
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-3 px-4">
@@ -123,6 +153,13 @@ export function ReaderView({
           </Link>
           {chapters.length > 1 ? <span className="shrink-0 text-sm font-medium text-white">Ch. {chapterNumber}</span> : null}
         </div>
+        <div className="mx-auto flex max-w-4xl items-center justify-center gap-2 px-3 pb-2" role="group" aria-label="Reader display controls">
+          <button type="button" onClick={() => changeZoom(-0.25)} disabled={zoom <= 0.5} aria-label="Zoom out" className="grid size-10 place-items-center rounded-lg bg-white/10 text-white disabled:opacity-30"><ZoomOut className="size-5" /></button>
+          <button type="button" onClick={() => setZoom(1)} aria-label="Reset zoom" title="Reset zoom (0)" className="h-10 min-w-16 rounded-lg bg-white/10 px-3 text-sm tabular-nums text-white">{Math.round(zoom * 100)}%</button>
+          <button type="button" onClick={() => changeZoom(0.25)} disabled={zoom >= 3} aria-label="Zoom in" className="grid size-10 place-items-center rounded-lg bg-white/10 text-white disabled:opacity-30"><ZoomIn className="size-5" /></button>
+          <button type="button" onClick={() => void toggleFullscreen()} aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"} aria-pressed={fullscreen} title="Fullscreen (F)" className="ml-2 flex h-10 items-center gap-2 rounded-lg bg-white/10 px-3 text-sm text-white">{fullscreen ? <Minimize className="size-5" /> : <Maximize className="size-5" />}<span className="hidden sm:inline">{fullscreen ? "Exit fullscreen" : "Fullscreen"}</span></button>
+        </div>
+        {displayMessage ? <p role="status" className="px-4 pb-2 text-center text-xs text-white">{displayMessage}</p> : null}
       </div>
 
       {/* Pages. `unoptimized` — imageUrl is a short-lived signed URL that
@@ -139,7 +176,7 @@ export function ReaderView({
           <Loader2 className="size-8 animate-spin text-white/40" />
         </div>
       ) : mode === "vertical" ? (
-        <div className="mx-auto max-w-3xl pb-28 pt-16">
+        <div className="mx-auto pb-28 pt-28" style={{ width: `calc(min(100vw, 768px) * ${zoom})` }}>
           {pages.map((p, i) => (
             <Image key={p.id} src={p.imageUrl} alt={`${mangaTitle} chapter ${chapterNumber} page ${i + 1}`} width={p.width} height={p.height} sizes="(max-width: 768px) 100vw, 768px" className="pointer-events-none mx-auto h-auto w-full select-none" draggable={false} priority={i < 2} unoptimized />
           ))}
@@ -150,12 +187,12 @@ export function ReaderView({
           </div>
         </div>
       ) : (
-        <div className="relative flex min-h-screen items-center justify-center px-2 pb-24 pt-16">
+        <div className="relative mx-auto flex min-h-screen w-max min-w-full items-center justify-center px-2 pb-24 pt-28">
           {pages[pageIdx] ? (
-            <Image key={pages[pageIdx].id} src={pages[pageIdx].imageUrl} alt={`${mangaTitle} chapter ${chapterNumber} page ${pageIdx + 1}`} width={pages[pageIdx].width} height={pages[pageIdx].height} sizes="(max-width: 900px) 100vw, 800px" className="pointer-events-none max-h-[85vh] w-auto object-contain select-none" draggable={false} priority unoptimized />
+            <Image key={pages[pageIdx].id} src={pages[pageIdx].imageUrl} alt={`${mangaTitle} chapter ${chapterNumber} page ${pageIdx + 1}`} width={pages[pageIdx].width} height={pages[pageIdx].height} sizes="(max-width: 900px) 100vw, 800px" style={{ width: `calc(min(calc(100vw - 16px), calc((100dvh - 224px) * ${pages[pageIdx].width / pages[pageIdx].height})) * ${zoom})` }} className="pointer-events-none h-auto max-w-none object-contain select-none" draggable={false} priority unoptimized />
           ) : null}
-          <button type="button" onClick={prevPage} aria-label="Previous page" className="absolute inset-y-0 left-0 w-1/3 cursor-w-resize" />
-          <button type="button" onClick={nextPage} aria-label="Next page" className="absolute inset-y-0 right-0 w-1/3 cursor-e-resize" />
+          <button type="button" onClick={prevPage} aria-label="Previous page" className="fixed bottom-20 left-2 z-10 grid size-11 place-items-center rounded-lg bg-black/80 text-white" > <ChevronLeft className="size-6" /></button>
+          <button type="button" onClick={nextPage} aria-label="Next page" className="fixed bottom-20 right-2 z-10 grid size-11 place-items-center rounded-lg bg-black/80 text-white" > <ChevronRight className="size-6" /></button>
           <span className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-white/90">{pageIdx + 1} / {pages.length}</span>
         </div>
       )}

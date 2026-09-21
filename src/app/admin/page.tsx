@@ -1,7 +1,8 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { formatDistanceToNowStrict } from "date-fns";
 import { BookText, DollarSign, Eye, Layers, MessageSquare, Users } from "lucide-react";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,8 @@ export const dynamic = "force-dynamic";
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
 export default async function AdminDashboardPage() {
-  const session = await auth();
+  const session = await requireAdmin();
+  if (!session) redirect("/");
   const [mangaCount, chapterCount, userCount, pendingCount, viewsAgg, revenueAgg, latestComments, recentUsers] = await Promise.all([
     prisma.manga.count(),
     prisma.chapter.count(),

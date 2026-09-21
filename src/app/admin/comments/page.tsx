@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth-guards";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Prisma, CommentStatus } from "@/generated/prisma/client";
@@ -18,6 +20,7 @@ export default async function AdminCommentsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  if (!(await requireStaff())) redirect("/");
   const { status } = await searchParams;
   const active = TABS.some((t) => t.key === status) ? status! : "PENDING";
   const where: Prisma.CommentWhereInput = active === "ALL" ? {} : { status: active as CommentStatus };

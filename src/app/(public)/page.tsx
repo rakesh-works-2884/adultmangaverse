@@ -28,7 +28,7 @@ const CATEGORY_TILES = [
 
 function Grid({ items }: { items: MangaCardData[] }) {
   return (
-    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-7 min-[480px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6">
       {items.map((m) => <MangaCard key={m.slug} manga={m} />)}
     </div>
   );
@@ -78,6 +78,10 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-6">
       <StructuredData data={websiteJsonLd()} />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-highlight">The reading room</p><h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Find your next obsession.</h1><p className="mt-3 text-sm text-text-muted">Discover manga, manhwa, and manhua. Save your favorites. Read at your pace.</p></div>
+        <Link href="/browse" className="rounded-full border border-border bg-surface px-5 py-3 text-sm font-medium hover:border-primary">Explore the library →</Link>
+      </div>
       {slides.length > 0 ? <HeroSlider slides={slides} /> : null}
 
       {/* Category tiles */}
@@ -123,7 +127,7 @@ export default async function HomePage() {
 
       {trending.length === 0 && newSeries.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-bg-soft px-5 py-12 text-center text-sm text-text-muted">
-          No published titles yet. Add manga from the admin panel to populate the homepage.
+          New stories are on their way. Check back soon to find your next read.
         </div>
       ) : null}
     </div>

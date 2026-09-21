@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth-guards";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -13,6 +15,7 @@ export default async function ChapterPagesPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!(await requireStaff())) redirect("/");
   const { id } = await params;
   const chapter = await prisma.chapter.findUnique({
     where: { id },

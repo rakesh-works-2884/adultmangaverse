@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { DollarSign, Receipt, TrendingUp, Users } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -34,6 +36,7 @@ export default async function AdminRevenuePage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  if (!(await requireAdmin())) redirect("/");
   const { page } = await searchParams;
   const currentPage = Math.max(1, Number(page) || 1);
 
@@ -72,14 +75,16 @@ export default async function AdminRevenuePage({
     }),
   ]);
 
-  // Bucket the last 30 days into daily totals for the trend bars.
+  // Aggregate each payment once instead of scanning the entire list for every day.
+  const dailyTotals = new Map<number, number>();
+  for (const payment of recentFinished) {
+    const day = startOfDay(payment.createdAt).getTime();
+    dailyTotals.set(day, (dailyTotals.get(day) ?? 0) + Number(payment.amountUsd));
+  }
   const days: { label: string; total: number }[] = [];
   for (let i = 29; i >= 0; i--) {
     const day = startOfDay(new Date(now.getTime() - i * 24 * 3600 * 1000));
-    const next = new Date(day.getTime() + 24 * 3600 * 1000);
-    const total = recentFinished
-      .filter((p) => p.createdAt >= day && p.createdAt < next)
-      .reduce((sum, p) => sum + Number(p.amountUsd), 0);
+    const total = dailyTotals.get(day.getTime()) ?? 0;
     days.push({ label: day.toLocaleDateString(undefined, { month: "short", day: "numeric" }), total });
   }
   const maxDay = Math.max(1, ...days.map((d) => d.total));

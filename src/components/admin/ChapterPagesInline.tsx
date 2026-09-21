@@ -23,7 +23,7 @@ export function ChapterPagesInline({
       if (!active) return;
       if (res.ok && res.data) setPages(res.data);
       else if (!res.ok) setError(res.error);
-    });
+    }).catch(() => { if (active) setError("Could not load pages. Please reopen this chapter to retry."); });
     return () => {
       active = false;
     };

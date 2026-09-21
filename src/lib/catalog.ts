@@ -1,3 +1,4 @@
+import "server-only";
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import type { Prisma, MangaStatus, MangaType, ContentIntensity } from "@/generated/prisma/client";

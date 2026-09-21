@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { hash, verify } from "@node-rs/argon2";
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { profileUpdateSchema, passwordChangeSchema } from "@/lib/validators";
 import type { ActionResult } from "@/lib/actions";
 
 export async function updateProfile(input: unknown): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in." };
 
   const parsed = profileUpdateSchema.safeParse(input);
@@ -28,7 +28,7 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
 }
 
 export async function changePassword(input: unknown): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in." };
 
   const parsed = passwordChangeSchema.safeParse(input);

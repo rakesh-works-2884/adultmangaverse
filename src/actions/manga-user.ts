@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { prisma } from "@/lib/db";
 import { getOfflineUsage, type OfflineUsage } from "@/actions/offline";
 
@@ -20,7 +20,7 @@ const EMPTY_ACTIONS_STATE: MangaActionsState = { isBookmarked: false, continueCh
  * render depends on auth() anymore.
  */
 export async function getMangaActionsState(mangaId: string): Promise<MangaActionsState> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return EMPTY_ACTIONS_STATE;
 
   const [prog, bm, offlineUsage] = await Promise.all([
@@ -41,7 +41,7 @@ export async function getMangaActionsState(mangaId: string): Promise<MangaAction
 
 /** The current user's existing review for this manga, if any — see ReviewForm's self-fetch. */
 export async function getMyReview(mangaId: string): Promise<{ rating: number; body: string } | null> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return null;
   return prisma.review.findUnique({
     where: { mangaId_userId: { mangaId, userId: session.user.id } },

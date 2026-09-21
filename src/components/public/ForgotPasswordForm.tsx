@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Mail } from "lucide-react";
 import { requestPasswordResetOtp } from "@/actions/otp";
-import { authInputWithIconClass } from "@/components/public/AuthCard";
+import { authInputWithIconClass } from "@/components/public/auth-styles";
 
 export function ForgotPasswordForm() {
   const router = useRouter();

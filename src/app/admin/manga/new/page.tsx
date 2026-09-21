@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/db";
@@ -6,6 +8,7 @@ import { MangaForm } from "@/components/admin/MangaForm";
 export const dynamic = "force-dynamic";
 
 export default async function NewMangaPage() {
+  if (!(await requireAdmin())) redirect("/");
   const genres = await prisma.genre.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true },

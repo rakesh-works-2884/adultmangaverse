@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { auth } from "@/auth";
+import { requireUser } from "@/lib/auth-guards";
 import { reviewSchema } from "@/lib/validators";
 import type { ActionResult } from "@/lib/actions";
 
@@ -19,7 +19,7 @@ async function recomputeRating(mangaId: string) {
 }
 
 export async function submitReview(mangaId: string, input: unknown): Promise<ActionResult> {
-  const session = await auth();
+  const session = await requireUser();
   if (!session) return { ok: false, error: "Please sign in to write a review." };
 
   const parsed = reviewSchema.safeParse(input);

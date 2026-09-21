@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import { Search } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
@@ -12,6 +14,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  if (!(await requireAdmin())) redirect("/");
   const session = await auth();
   const { q } = await searchParams;
   const query = (q ?? "").trim();

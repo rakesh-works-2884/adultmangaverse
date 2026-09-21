@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -7,6 +9,7 @@ import { StaticPageForm, type StaticPageInitial } from "@/components/admin/Stati
 export const dynamic = "force-dynamic";
 
 export default async function EditStaticPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!(await requireAdmin())) redirect("/");
   const { id } = await params;
   const page = await prisma.staticPage.findUnique({ where: { id } });
   if (!page) notFound();

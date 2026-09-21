@@ -1,9 +1,12 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import { FolderArchive } from "lucide-react";
 import { BulkImportForm } from "@/components/admin/BulkImportForm";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminImportPage() {
+export default async function AdminImportPage() {
+  if (!(await requireAdmin())) redirect("/");
   return (
     <div className="space-y-6">
       <div>
@@ -11,7 +14,7 @@ export default function AdminImportPage() {
           <FolderArchive className="size-6 text-primary" /> Bulk Import
         </h1>
         <p className="mt-1 text-sm text-text-muted">
-          Upload a .zip with one XML metadata file and a set of numbered page images to add a chapter in one step.
+          Upload a .zip of numbered page images to add a chapter. XML metadata is optional; without it, the ZIP filename becomes the title.
         </p>
       </div>
 
@@ -19,7 +22,7 @@ export default function AdminImportPage() {
         <p className="mb-3 font-semibold">Expected ZIP layout</p>
         <pre className="overflow-x-auto rounded-lg bg-bg-soft p-3 text-xs leading-relaxed text-text-muted">
 {`upload.zip
-├─ info.xml       (ComicInfo-style metadata — see fields below)
+├─ info.xml       (optional ComicInfo-style metadata)
 ├─ 001.jpg
 ├─ 002.jpg
 ├─ 003.jpg
@@ -30,7 +33,7 @@ export default function AdminImportPage() {
           also kept as page 1 of the chapter.
         </p>
 
-        <p className="mt-4 mb-2 font-semibold">XML fields</p>
+        <p className="mt-4 mb-2 font-semibold">Optional XML fields</p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px] text-xs">
             <thead className="text-left text-text-muted">

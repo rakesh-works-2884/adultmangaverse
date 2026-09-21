@@ -1,3 +1,4 @@
+import "server-only";
 import { writeFile, mkdir, unlink } from "node:fs/promises";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import path from "node:path";
@@ -22,6 +23,19 @@ import { AwsClient } from "aws4fetch";
  *                predictable/public URL scheme.
  */
 export type Visibility = "public" | "protected";
+
+/** Safe to show to an administrator; never contains provider response bodies. */
+export class StorageError extends Error {
+  constructor(public readonly code: "configuration" | "authorization" | "unavailable") {
+    const messages = {
+      configuration: "Upload storage is not configured. Ask the site administrator to check the server storage settings.",
+      authorization: "Upload storage rejected access. Ask the site administrator to check the storage credentials and bucket permissions, then retry.",
+      unavailable: "Upload storage is temporarily unavailable. Please try again shortly.",
+    };
+    super(messages[code]);
+    this.name = "StorageError";
+  }
+}
 
 export interface StorageAdapter {
   save(key: string, data: Buffer, visibility: Visibility): Promise<string>; // "public" → public URL, "protected" → bare key
@@ -79,6 +93,8 @@ export function protectedRootDir(): string {
 export function keyFromUrl(url: string): string | null {
   const r2 = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
   if (r2 && url.startsWith(`${r2}/`)) return url.slice(r2.length + 1);
+  const mediaPrefix = "/api/media/";
+  if (url.startsWith(mediaPrefix)) return url.slice(mediaPrefix.length);
   const prefix = "/uploads/";
   if (url.startsWith(prefix)) return url.slice(prefix.length);
   // Already a bare key (protected files, or any value that isn't a legacy URL).
@@ -121,19 +137,43 @@ class R2Storage implements StorageAdapter {
   private endpoint = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET}`;
   private publicUrl = (process.env.R2_PUBLIC_URL ?? "").replace(/\/$/, "");
 
+  private validateConfig(): void {
+    const required = ["R2_ACCOUNT_ID", "R2_BUCKET", "R2_PUBLIC_URL", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"];
+    if (required.some((key) => !process.env[key]?.trim())) throw new StorageError("configuration");
+  }
+
+  private async request(url: string, init: RequestInit): Promise<Response> {
+    this.validateConfig();
+    let response: Response;
+    try {
+      response = await this.client.fetch(url, { ...init, signal: AbortSignal.timeout(60_000) });
+    } catch {
+      throw new StorageError("unavailable");
+    }
+    if (!response.ok) {
+      console.error("[STORAGE] R2 request rejected", { method: init.method, status: response.status });
+      await response.body?.cancel();
+      throw new StorageError(response.status === 401 || response.status === 403 ? "authorization" : "unavailable");
+    }
+    return response;
+  }
+
+  async checkAccess(): Promise<void> {
+    await this.request(this.endpoint, { method: "HEAD" });
+  }
+
   async save(key: string, data: Buffer, visibility: Visibility): Promise<string> {
     // Explicit Content-Length: without it, Next's fetch (undici) can send
     // this PUT without one in some runtime contexts (observed from a Route
     // Handler specifically), and R2 replies 411 Length Required.
-    const res = await this.client.fetch(`${this.endpoint}/${key}`, {
+    await this.request(`${this.endpoint}/${key}`, {
       method: "PUT",
       body: new Uint8Array(data),
       headers: { "content-type": contentTypeFor(key), "content-length": String(data.byteLength) },
     });
-    if (!res.ok) throw new Error(`[STORAGE] R2 upload failed: ${res.status} ${await res.text().catch(() => "")}`);
     // "protected" content should live in a bucket with no public custom
     // domain bound — access only ever happens through a presigned URL below.
-    return visibility === "public" ? `${this.publicUrl}/${key}` : key;
+    return visibility === "public" ? `/api/media/${key}` : key;
   }
 
   async remove(key: string): Promise<void> {
@@ -155,13 +195,14 @@ class R2Storage implements StorageAdapter {
 function createStorage(): StorageAdapter {
   const driver = process.env.STORAGE_DRIVER ?? "local";
   if (driver === "r2") {
-    if (!process.env.R2_ACCOUNT_ID || !process.env.R2_BUCKET || !process.env.R2_PUBLIC_URL) {
-      console.warn("[STORAGE] STORAGE_DRIVER=r2 but R2_* env vars are incomplete; using local.");
-      return new LocalStorage();
-    }
     return new R2Storage();
   }
   return new LocalStorage();
 }
 
 export const storage: StorageAdapter = createStorage();
+
+/** Fail before decoding a large archive when the remote storage is inaccessible. */
+export async function checkStorageAccess(): Promise<void> {
+  if (storage instanceof R2Storage) await storage.checkAccess();
+}

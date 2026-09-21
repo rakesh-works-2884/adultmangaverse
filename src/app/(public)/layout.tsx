@@ -1,3 +1,5 @@
+import { getSettings } from "@/lib/settings";
+import { AnalyticsInjector } from "@/components/public/AnalyticsInjector";
 import { AlertTriangle } from "lucide-react";
 import { getGenresList } from "@/lib/catalog";
 import { SiteHeader } from "@/components/public/SiteHeader";
@@ -15,7 +17,7 @@ export default async function PublicLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const genres = await getGenresList();
+  const [genres, { analyticsSnippet }] = await Promise.all([getGenresList(), getSettings()]);
 
   return (
     <SessionProvider>
@@ -29,6 +31,7 @@ export default async function PublicLayout({
         <main className="flex-1">{children}</main>
         <SiteFooter />
         <AgeGate />
+        {analyticsSnippet ? <AnalyticsInjector snippet={analyticsSnippet} /> : null}
       </div>
     </SessionProvider>
   );

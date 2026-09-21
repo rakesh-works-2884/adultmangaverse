@@ -74,11 +74,21 @@ export async function verifyOtp(email: string, purpose: OtpPurpose, code: string
   if (otp.expiresAt < new Date()) return { ok: false, error: "Code expired — request a new one." };
   if (otp.attempts >= MAX_ATTEMPTS) return { ok: false, error: "Too many attempts — request a new code." };
 
+  // Reserve an attempt atomically, including concurrent verification requests.
+  const attempt = await prisma.emailOtp.updateMany({
+    where: { id: otp.id, consumedAt: null, expiresAt: { gt: new Date() }, attempts: { lt: MAX_ATTEMPTS } },
+    data: { attempts: { increment: 1 } },
+  });
+  if (attempt.count !== 1) return { ok: false, error: "Code unavailable — request a new one." };
+
   if (otp.codeHash !== hashCode(code.trim())) {
-    await prisma.emailOtp.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
     return { ok: false, error: "Incorrect code." };
   }
 
-  await prisma.emailOtp.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });
+  const consumed = await prisma.emailOtp.updateMany({
+    where: { id: otp.id, consumedAt: null, expiresAt: { gt: new Date() } },
+    data: { consumedAt: new Date() },
+  });
+  if (consumed.count !== 1) return { ok: false, error: "Code unavailable — request a new one." };
   return { ok: true };
 }

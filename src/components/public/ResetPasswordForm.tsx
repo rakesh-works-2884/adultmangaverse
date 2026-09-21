@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { requestPasswordResetOtp, verifyResetOtpAndSetPassword } from "@/actions/otp";
-import { authInputWithIconClass } from "@/components/public/AuthCard";
+import { authInputWithIconClass } from "@/components/public/auth-styles";
 import { OtpInput } from "@/components/public/OtpInput";
 
 const RESEND_COOLDOWN = 60;

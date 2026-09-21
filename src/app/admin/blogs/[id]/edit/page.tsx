@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth-guards";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -7,6 +9,7 @@ import { BlogForm, type BlogFormInitial } from "@/components/admin/BlogForm";
 export const dynamic = "force-dynamic";
 
 export default async function EditBlogPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!(await requireAdmin())) redirect("/");
   const { id } = await params;
   const post = await prisma.blog.findUnique({ where: { id } });
   if (!post) notFound();

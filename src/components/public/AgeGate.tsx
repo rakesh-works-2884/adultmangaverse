@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { siteConfig } from "@/lib/site";
-import { authInputClass } from "@/components/public/AuthCard";
+import { authInputClass } from "@/components/public/auth-styles";
 
 const MIN_AGE = 18;
 const VERIFY_EVENT = "amv-age-verified";
