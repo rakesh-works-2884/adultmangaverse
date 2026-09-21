@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
-import { safeRedirect } from "@/lib/safe-redirect";
 import { loginSchema } from "@/lib/validators";
 import { authInputWithIconClass } from "@/components/public/auth-styles";
+import { authenticateUser } from "@/actions/auth-actions";
 
 export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -30,20 +27,13 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     }
 
     startTransition(async () => {
-      try {
-      const res = await signIn("credentials", {
+      const res = await authenticateUser({
         email: parsed.data.email,
         password: parsed.data.password,
-        redirect: false,
+        callbackUrl,
       });
-      if (!res || res.error) {
-        setError("Invalid email or password.");
-        return;
-      }
-      router.push(safeRedirect(callbackUrl));
-      router.refresh();
-      } catch {
-        setError("Unable to sign in right now. Please try again.");
+      if (res && !res.ok) {
+        setError(res.error);
       }
     });
   }

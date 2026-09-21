@@ -16,6 +16,10 @@ function parseForm(fd: FormData) {
     contentHtml: String(fd.get("contentHtml") ?? ""),
     seoTitle: String(fd.get("seoTitle") ?? "").trim() || undefined,
     seoDescription: String(fd.get("seoDescription") ?? "").trim() || undefined,
+    focusKeyword: String(fd.get("focusKeyword") ?? "").trim() || undefined,
+    canonicalUrl: String(fd.get("canonicalUrl") ?? "").trim() || undefined,
+    noindex: fd.get("noindex") === "on" || fd.get("noindex") === "true",
+    nofollow: fd.get("nofollow") === "on" || fd.get("nofollow") === "true",
   };
 }
 
@@ -36,6 +40,10 @@ export async function createStaticPage(fd: FormData): Promise<ActionResult<{ id:
         contentHtml: data.contentHtml ? sanitizeRichText(data.contentHtml) : "",
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
+        focusKeyword: data.focusKeyword ?? null,
+        canonicalUrl: data.canonicalUrl ?? null,
+        noindex: data.noindex ?? false,
+        nofollow: data.nofollow ?? false,
       },
     });
     revalidatePath("/admin/pages");
@@ -49,12 +57,12 @@ export async function createStaticPage(fd: FormData): Promise<ActionResult<{ id:
 }
 
 export async function updateStaticPage(id: string, fd: FormData): Promise<ActionResult> {
-  if (!(await requireAdmin())) return { ok: false, error: "Not authorized." };
-  const parsed = staticPageSchema.safeParse(parseForm(fd));
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
-  const data = parsed.data;
-
   try {
+    if (!(await requireAdmin())) return { ok: false, error: "Not authorized." };
+    const parsed = staticPageSchema.safeParse(parseForm(fd));
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    const data = parsed.data;
+
     const existing = await prisma.staticPage.findUnique({ where: { id } });
     if (!existing) return { ok: false, error: "Page not found." };
 
@@ -74,16 +82,26 @@ export async function updateStaticPage(id: string, fd: FormData): Promise<Action
         contentHtml: data.contentHtml ? sanitizeRichText(data.contentHtml) : "",
         seoTitle: data.seoTitle ?? null,
         seoDescription: data.seoDescription ?? null,
+        focusKeyword: data.focusKeyword ?? null,
+        canonicalUrl: data.canonicalUrl ?? null,
+        noindex: data.noindex ?? false,
+        nofollow: data.nofollow ?? false,
       },
     });
-    revalidatePath("/admin/pages");
-    revalidatePath(`/p/${slug}`);
-    if (existing.slug !== slug) revalidatePath(`/p/${existing.slug}`);
+
+    try {
+      revalidatePath("/admin/pages");
+      revalidatePath(`/p/${slug}`);
+      if (existing.slug !== slug) revalidatePath(`/p/${existing.slug}`);
+    } catch (revErr) {
+      console.warn("[PAGE] revalidatePath error ignored:", revErr);
+    }
+
     return { ok: true };
   } catch (e) {
     if (isUniqueViolation(e)) return { ok: false, error: "A page with this slug already exists." };
     console.error("[PAGE] update failed:", e);
-    return { ok: false, error: "Could not update page." };
+    return { ok: false, error: (e as Error).message || "Could not update page." };
   }
 }
 

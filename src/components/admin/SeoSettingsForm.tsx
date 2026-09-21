@@ -53,6 +53,20 @@ export function SeoSettingsForm({ settings }: { settings: Record<string, string>
         <input name="twitterHandle" defaultValue={settings.twitterHandle} placeholder="@yoursite" className={adminInput} />
       </div>
 
+      <div className="pt-2 border-t border-border/60 space-y-4">
+        <h4 className="font-heading text-sm font-semibold text-text">Webmaster Tools Verification</h4>
+
+        <div className="space-y-1.5">
+          <label className={adminLabel}>Google Search Console Verification Code</label>
+          <input name="googleVerification" defaultValue={settings.googleVerification} placeholder="e.g. google-site-verification-code" className={adminInput} />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className={adminLabel}>Bing Webmaster Verification Code</label>
+          <input name="bingVerification" defaultValue={settings.bingVerification} placeholder="e.g. bing-verification-code" className={adminInput} />
+        </div>
+      </div>
+
       <div className="space-y-1.5">
         <label className={adminLabel}>Analytics snippet</label>
         <textarea name="analyticsSnippet" defaultValue={settings.analyticsSnippet} rows={4} className={`${adminTextarea} font-mono text-xs`} placeholder="Paste your analytics <script> tag(s) — injected site-wide." />

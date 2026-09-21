@@ -14,6 +14,8 @@ export const authConfig = {
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    signOut: "/login",
+    error: "/login",
   },
   providers: [],
   callbacks: {
@@ -30,6 +32,17 @@ export const authConfig = {
         session.user.role = token.role as Role;
       }
       return session;
+    },
+    redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return url;
+      try {
+        const u = new URL(url);
+        if (u.hostname === "0.0.0.0" || u.hostname === "127.0.0.1") {
+          return "/";
+        }
+        if (u.origin === baseUrl) return url;
+      } catch {}
+      return "/";
     },
   },
 } satisfies NextAuthConfig;

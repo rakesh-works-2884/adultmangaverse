@@ -25,7 +25,7 @@ export default auth((req) => {
     }
   }
 
-  if (path.startsWith("/library")) {
+  if (path.startsWith("/library") || path.startsWith("/account")) {
     if (!isLoggedIn) return requireLogin();
   }
 
@@ -33,5 +33,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/library/:path*"],
+  matcher: ["/admin/:path*", "/library/:path*", "/account/:path*"],
 };

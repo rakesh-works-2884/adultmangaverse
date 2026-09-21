@@ -23,29 +23,39 @@ export async function buildMetadata(opts: {
   fullTitle?: string; // bypass the template
   description?: string;
   path?: string; // canonical path, e.g. "/manga/foo"
+  canonicalUrl?: string | null;
   image?: string | null;
   noindex?: boolean;
+  nofollow?: boolean;
   ogType?: "website" | "article" | "book";
 }): Promise<Metadata> {
   const s = await getSettings();
   const fullTitle =
     opts.fullTitle ??
-    (opts.title ? applyTemplate(s.titleTemplate, opts.title) : `${s.siteName} — ${siteConfig.tagline}`);
-  const description = (opts.description || s.defaultDescription).slice(0, 300);
-  const canonical = abs(opts.path ?? "/");
+    (opts.title ? applyTemplate(s.titleTemplate || "%s", opts.title) : `${s.siteName || siteConfig.name} — ${siteConfig.tagline}`);
+  const description = (opts.description || s.defaultDescription || siteConfig.description).slice(0, 300);
+  const canonical = opts.canonicalUrl ? opts.canonicalUrl : abs(opts.path ?? "/");
   const img = opts.image || s.defaultOgImage;
   const images = img ? [abs(img)] : undefined;
+
+  const verification: Record<string, string> = {};
+  if (s.googleVerification) verification.google = s.googleVerification;
+  if (s.bingVerification) verification.yandex = s.bingVerification; // or custom verification meta tags
 
   return {
     title: { absolute: fullTitle },
     description,
     alternates: { canonical },
-    robots: opts.noindex ? { index: false, follow: false } : { index: true, follow: true },
+    robots: {
+      index: !opts.noindex,
+      follow: !opts.nofollow,
+    },
+    verification: Object.keys(verification).length > 0 ? verification : undefined,
     openGraph: {
       title: fullTitle,
       description,
       url: canonical,
-      siteName: s.siteName,
+      siteName: s.siteName || siteConfig.name,
       type: opts.ogType === "book" ? "website" : opts.ogType ?? "website",
       images,
     },

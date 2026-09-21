@@ -6,6 +6,8 @@ import { auth } from "@/auth";
 import { AuthCard } from "@/components/public/AuthCard";
 import { LoginForm } from "@/components/public/LoginForm";
 
+export const dynamic = "force-dynamic";
+
 // NOTE: auth pages are intentionally noindex. The lib/seo.ts metadata engine
 // (Phase 7) will formalize metadata across all pages; this is the interim.
 export const metadata: Metadata = {
@@ -18,9 +20,22 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ callbackUrl?: string; reset?: string }>;
 }) {
-  const { callbackUrl, reset } = await searchParams;
+  let callbackUrl = "/";
+  let reset = "";
+  try {
+    const params = await searchParams;
+    if (params?.callbackUrl) callbackUrl = params.callbackUrl;
+    if (params?.reset) reset = params.reset;
+  } catch {}
+
+  let session = null;
+  try {
+    session = await auth();
+  } catch (e) {
+    console.error("[LOGIN PAGE] auth check error:", e);
+  }
+
   const destination = safeRedirect(callbackUrl);
-  const session = await auth();
   if (session) redirect(destination);
 
   return (

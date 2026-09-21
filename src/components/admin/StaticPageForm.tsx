@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createStaticPage, updateStaticPage } from "@/actions/staticpages";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { RankMathSeoWidget } from "@/components/admin/RankMathSeoWidget";
 import { adminInput, adminLabel, adminTextarea, btnPrimary, btnSecondary } from "@/components/admin/styles";
 
 export type StaticPageInitial = {
@@ -14,6 +15,10 @@ export type StaticPageInitial = {
   contentHtml: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  focusKeyword?: string | null;
+  canonicalUrl?: string | null;
+  noindex?: boolean;
+  nofollow?: boolean;
 };
 
 export function StaticPageForm({
@@ -28,26 +33,46 @@ export function StaticPageForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const [saved, setSaved] = useState(false);
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setSaved(false);
     const fd = new FormData(e.currentTarget);
     fd.set("contentHtml", content);
     startTransition(async () => {
-      const res = mode === "create" ? await createStaticPage(fd) : await updateStaticPage(initial!.id, fd);
-      if (!res.ok) {
-        setError(res.error);
+      try {
+        const res = mode === "create" ? await createStaticPage(fd) : await updateStaticPage(initial!.id, fd);
+        if (!res.ok) {
+          setError(res.error || "Could not save page changes.");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+        if (mode === "create") {
+          router.push("/admin/pages");
+          return;
+        }
+        setSaved(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
+      } catch (err) {
+        // A production build strips the real message from any server-side
+        // failure, leaving only a digest — show it, so it can be matched to
+        // the "[SERVER ERROR] … digest …" line in the server log.
+        const e = err as Error & { digest?: string };
+        setError(
+          (e.message || "An unexpected error occurred.") +
+            (e.digest ? ` (server error ref: ${e.digest})` : ""),
+        );
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
-      router.push("/admin/pages");
-      router.refresh();
     });
   }
 
   return (
     <form onSubmit={onSubmit} className="max-w-3xl space-y-5">
       {error ? <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p> : null}
+      {saved ? <p className="rounded-lg border border-success/40 bg-success/10 px-3 py-2 text-sm text-success">Saved changes successfully.</p> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
@@ -66,19 +91,18 @@ export function StaticPageForm({
         <RichTextEditor value={content} onChange={setContent} />
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <h3 className="mb-3 font-heading text-sm font-semibold">SEO (optional)</h3>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className={adminLabel}>Meta title</label>
-            <input name="seoTitle" defaultValue={initial?.seoTitle ?? ""} maxLength={70} className={adminInput} />
-          </div>
-          <div className="space-y-1.5">
-            <label className={adminLabel}>Meta description</label>
-            <textarea name="seoDescription" defaultValue={initial?.seoDescription ?? ""} rows={2} maxLength={200} className={adminTextarea} />
-          </div>
-        </div>
-      </div>
+      <RankMathSeoWidget
+        initialTitle={initial?.seoTitle ?? ""}
+        initialDescription={initial?.seoDescription ?? ""}
+        initialFocusKeyword={initial?.focusKeyword ?? ""}
+        initialCanonicalUrl={initial?.canonicalUrl ?? ""}
+        initialNoindex={initial?.noindex ?? false}
+        initialNofollow={initial?.nofollow ?? false}
+        fallbackTitle={initial?.title ?? ""}
+        synopsisOrContent={content}
+        slug={initial?.slug ?? ""}
+        pathPrefix="/p"
+      />
 
       <div className="flex items-center gap-3 border-t border-border pt-5">
         <button type="submit" disabled={pending} className={btnPrimary}>

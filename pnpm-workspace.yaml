@@ -1,10 +1,25 @@
-onlyBuiltDependencies:
-  - sharp
-ignoredBuiltDependencies:
-  - unrs-resolver
+packages:
+  - '.'
+
+# pnpm v11 removed onlyBuiltDependencies / neverBuiltDependencies /
+# ignoredBuiltDependencies in favour of this single allowBuilds map, and it no
+# longer reads pnpm settings from package.json or .npmrc at all. With no map,
+# every dependency build script counts as "unreviewed" and strictDepBuilds
+# (now true by default) aborts the install with ERR_PNPM_IGNORED_BUILDS.
+#
+# All of these are deliberately declined: Hostinger's build container runs
+# postinstall under a restricted user, where esbuild's binary install fails with
+# EACCES. None of the scripts are needed here — our own `postinstall` runs
+# `prisma generate`, and sharp / esbuild / unrs-resolver each ship their linux-x64
+# binary as a prebuilt optional dependency.
 allowBuilds:
-  '@prisma/engines': true
-  esbuild: true
-  prisma: true
-  sharp: true
+  '@prisma/client': false
+  '@prisma/engines': false
+  prisma: false
+  sharp: false
+  esbuild: false
   unrs-resolver: false
+
+# Belt and braces: never let a newly-introduced transitive build script break a
+# deploy. Unreviewed builds are reported as a warning instead of a hard failure.
+strictDepBuilds: false

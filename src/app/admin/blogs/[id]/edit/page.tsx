@@ -25,6 +25,10 @@ export default async function EditBlogPage({ params }: { params: Promise<{ id: s
     coverImage: post.coverImage,
     seoTitle: post.seoTitle,
     seoDescription: post.seoDescription,
+    focusKeyword: post.focusKeyword,
+    canonicalUrl: post.canonicalUrl,
+    noindex: post.noindex,
+    nofollow: post.nofollow,
   };
 
   return (

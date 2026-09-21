@@ -1,6 +1,20 @@
+"use client";
+
+import { useEffect } from "react";
 import Link from "next/link";
 
 export default function NotFound() {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const currentPath = window.location.pathname;
+      fetch("/api/seo/log-404", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: currentPath }),
+      }).catch(() => {});
+    }
+  }, []);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-4 text-center">
       <p className="font-heading text-7xl font-bold text-primary">404</p>
