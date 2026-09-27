@@ -1,6 +1,10 @@
 packages:
   - '.'
 
+# Vercel function packages must not contain files under symlinked directories.
+# A flat dependency tree also keeps Sharp's native libraries beside its binary.
+nodeLinker: hoisted
+
 # pnpm v11 removed onlyBuiltDependencies / neverBuiltDependencies /
 # ignoredBuiltDependencies in favour of this single allowBuilds map, and it no
 # longer reads pnpm settings from package.json or .npmrc at all. With no map,

@@ -52,13 +52,12 @@ const nextConfig: NextConfig = {
   // requires it normally at runtime. Same for the Prisma driver adapter.
   serverExternalPackages: ["sharp", "@prisma/adapter-pg", "@napi-rs/canvas", "pdf-to-img", "pdfjs-dist"],
   // Native libraries are loaded dynamically, so tracing can miss libvips.
-  // Include both npm's layout and pnpm's store, retaining sibling library paths.
+  // pnpm uses a flat layout (see pnpm-workspace.yaml) so these are real files,
+  // not symlinked directories that Vercel rejects in function packages.
   outputFileTracingIncludes: {
     "/*": [
       "node_modules/sharp/**/*",
       "node_modules/@img/sharp-*/**/*",
-      "node_modules/.pnpm/sharp@*/node_modules/sharp/**/*",
-      "node_modules/.pnpm/@img+sharp-*/node_modules/@img/sharp-*/**/*",
     ],
   },
   compress: true,
