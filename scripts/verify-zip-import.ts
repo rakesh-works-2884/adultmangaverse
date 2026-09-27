@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { readFileSync } from "node:fs";
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomBytes } from "node:crypto";
+import { hash } from "@node-rs/argon2";
 import { parse } from "dotenv";
 import { request } from "playwright";
 import JSZip from "jszip";
@@ -14,15 +15,33 @@ const s3=new AwsClient({accessKeyId:process.env.R2_ACCESS_KEY_ID!,secretAccessKe
 const endpoint=`https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET}`;
 async function main(){
  const context=await request.newContext({baseURL:process.env.TEST_BASE_URL || "http://localhost:3002",timeout:120000});
+ let testUserId: string | undefined;
  try {
-  const creds=parse(readFileSync(".env.test-admin.local"));
+  const creds=process.env.TEST_FRESH_ADMIN === "1" ? {TEST_ADMIN_EMAIL:`upload-test-${randomUUID()}@example.com`,TEST_ADMIN_PASSWORD:randomBytes(24).toString("hex")} : parse(readFileSync(".env.test-admin.local"));
+  if(process.env.TEST_FRESH_ADMIN === "1") testUserId=(await db.user.create({data:{email:creds.TEST_ADMIN_EMAIL,passwordHash:await hash(creds.TEST_ADMIN_PASSWORD),role:"ADMIN",name:"Upload test"},select:{id:true}})).id;
   const csrf=await (await context.get("/api/auth/csrf")).json();
   await context.post("/api/auth/callback/credentials",{form:{csrfToken:csrf.csrfToken,email:creds.TEST_ADMIN_EMAIL,password:creds.TEST_ADMIN_PASSWORD},headers:{"X-Auth-Return-Redirect":"1"}});
   const session=await (await context.get("/api/auth/session")).json();
   if(session?.user?.role!=="ADMIN")throw Error("Test login failed");
   const zip=new JSZip();if(process.env.TEST_IMAGE_ONLY !== "1") zip.file("ComicInfo.xml",`<ComicInfo><Title>${title}</Title><Writer>Upload test</Writer></ComicInfo>`);
   for(let i=1;i<=2;i++) zip.file(`pages/00${i}.png`,await sharp({create:{width:800,height:1200,channels:3,background:i===1?"#203040":"#405060"}}).png().toBuffer());
-  const response=await context.post("/api/admin/import",{multipart:{file:{name:`${title}.zip`,mimeType:"application/zip",buffer:await zip.generateAsync({type:"nodebuffer"})}}});
+  // Force the upload above Vercel's single-request limit without real content.
+  if(process.env.TEST_CHUNKED === "1") zip.file("padding.bin", Buffer.alloc(5 * 1024 * 1024));
+  const buffer = await zip.generateAsync({type:"nodebuffer",compression:"STORE"});
+  let response;
+  if(process.env.TEST_CHUNKED === "1") {
+   const init=await context.post("/api/admin/import/upload",{data:{name:title+".zip",size:buffer.length}});
+   const upload=await init.json(); if(!init.ok())throw Error(upload.error);
+   try {
+    for(let offset=0,i=0;offset<buffer.length;offset+=upload.chunkBytes,i++){
+     const part=await context.put("/api/admin/import/upload",{headers:{"x-upload-token":upload.token,"x-upload-part":String(i),"Content-Type":"application/octet-stream"},data:buffer.subarray(offset,offset+upload.chunkBytes)});
+     if(!part.ok())throw Error("Chunk upload failed: "+part.status());
+    }
+    response=await context.post("/api/admin/import",{data:{token:upload.token}});
+   } finally {await context.delete("/api/admin/import/upload",{headers:{"x-upload-token":upload.token}});}
+  } else {
+   response=await context.post("/api/admin/import",{multipart:{file:{name:title+".zip",mimeType:"application/zip",buffer}}});
+  }
   const body=await response.json();
   if(!response.ok() || !body.result?.ok)throw Error("ZIP import failed: "+(body.error || body.result?.error || response.status()));
   const manga=await db.manga.findUniqueOrThrow({where:{id:body.result.id},select:{published:true,coverUrl:true,chapters:{select:{publishedAt:true,pages:{select:{imageUrl:true,width:true,height:true}}}}}});
@@ -48,6 +67,7 @@ async function main(){
    for(const key of keys){const result=await s3.fetch(`${endpoint}/${key}`,{method:"DELETE"});if(!result.ok)throw Error("Test object cleanup failed");}
    await db.manga.delete({where:{id:fixture.id}});
   }
+  if(testUserId) await db.user.delete({where:{id:testUserId}});
   await context.dispose();await db.$disconnect();
   console.log("Test records and uploaded objects removed.");
  }

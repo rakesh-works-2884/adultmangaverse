@@ -12,6 +12,19 @@ export function BulkImportForm() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [progress, setProgress] = useState("");
+
+  async function responseBody(res: Response) {
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      const fallback = res.status === 413 ? "The server rejected the upload size. Please retry with the latest version of this page."
+        : res.status === 504 ? "Import processing timed out. Check the admin manga list before retrying, or split the ZIP into smaller chapters."
+        : `Upload failed (HTTP ${res.status}). Please retry.`;
+      throw new Error(body?.error || fallback);
+    }
+    if (!body) throw new Error("The server returned an unexpected response. Please retry.");
+    return body;
+  }
 
   // Large ZIPs (hundreds of MB, hundreds of pages) can legitimately take a
   // couple of minutes to upload + re-encode + push to storage. Without this,
@@ -25,25 +38,49 @@ export function BulkImportForm() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!file) return;
+    if (file.size > 200 * 1024 * 1024) { setError("Select a ZIP file up to 200 MB."); return; }
     setPending(true);
     setElapsed(0);
     setError(null);
     setResult(null);
 
+    let token: string | undefined;
     try {
+      let res: Response;
+      if (file.size > 3 * 1024 * 1024) {
+        setProgress("Preparing upload…");
+        const upload = await responseBody(await fetch("/api/admin/import/upload", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: file.name, size: file.size }),
+        }));
+        token = upload.token;
+        const chunkBytes = upload.chunkBytes as number;
+        for (let offset = 0, part = 0; offset < file.size; offset += chunkBytes, part++) {
+          setProgress(`Uploading ${Math.round(offset / file.size * 100)}%`);
+          await responseBody(await fetch("/api/admin/import/upload", {
+            method: "PUT",
+            headers: { "x-upload-token": token!, "x-upload-part": String(part), "Content-Type": "application/octet-stream" },
+            body: file.slice(offset, offset + chunkBytes),
+          }));
+        }
+        setProgress("Upload complete. Processing pages…");
+        res = await fetch("/api/admin/import", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, title: title.trim() }),
+        });
+      } else {
+      setProgress("Uploading and processing pages…");
       const fd = new FormData();
       fd.set("file", file);
       if (title.trim()) fd.set("title", title.trim());
-      const res = await fetch("/api/admin/import", { method: "POST", body: fd });
-      const body = await res.json();
-      if (!res.ok) {
-        setError(body.error ?? "Import failed.");
-        return;
+      res = await fetch("/api/admin/import", { method: "POST", body: fd });
       }
+      const body = await responseBody(res);
       setResult(body.result as ImportResult);
-    } catch {
-      setError("Could not reach the server. The ZIP may be too large or the connection dropped.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Upload interrupted. Check your connection and retry.");
     } finally {
+      if (token) await fetch("/api/admin/import/upload", { method: "DELETE", headers: { "x-upload-token": token } }).catch(() => {});
       setPending(false);
     }
   }
@@ -73,7 +110,7 @@ export function BulkImportForm() {
           {pending ? `Importing… ${elapsed}s` : "Import ZIP"}
         </button>
         {file ? <span className="text-xs text-text-muted">{file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</span> : null}
-        {pending ? <span className="text-xs text-text-muted">Large ZIPs can take a few minutes — this is re-encoding and uploading every page, don&apos;t close the tab.</span> : null}
+        {pending ? <span role="status" className="text-xs text-text-muted">{progress} Keep this tab open.</span> : null}
       </form>
 
       {error ? <p role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p> : null}

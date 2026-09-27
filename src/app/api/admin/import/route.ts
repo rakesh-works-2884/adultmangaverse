@@ -8,6 +8,9 @@ import { requireAdmin } from "@/lib/auth-guards";
 import { storage, checkStorageAccess, StorageError } from "@/lib/storage";
 import { processCoverBuffer, processChapterPageBuffer } from "@/lib/images";
 import { slugify, uniqueSlug } from "@/lib/slug";
+import { verifyUpload, readUpload, removeUpload, MAX_ZIP_BYTES } from "@/lib/import-upload";
+
+export const maxDuration = 300;
 
 /**
  * Bulk import from a single ZIP: one ComicInfo-style XML file + a flat set of
@@ -119,11 +122,24 @@ export type ImportResult =
   | { ok: false; error: string };
 
 export async function POST(req: Request) {
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   let fd: FormData;
   try {
-    fd = await req.formData();
+    if (req.headers.get("content-type")?.includes("application/json")) {
+      const input = await req.json();
+      const upload = verifyUpload(input.token, session.user.id);
+      fd = new FormData();
+      try {
+        fd.set("file", await readUpload(upload));
+        if (typeof input.title === "string") fd.set("title", input.title);
+      } finally {
+        await removeUpload(upload);
+      }
+    } else {
+      fd = await req.formData();
+    }
   } catch {
     return NextResponse.json({ error: "Could not read the upload. Please select the ZIP again and retry." }, { status: 400 });
   }
@@ -134,6 +150,7 @@ export async function POST(req: Request) {
   if (!file.name.toLowerCase().endsWith(".zip")) {
     return NextResponse.json({ error: "Please upload a .zip file." }, { status: 400 });
   }
+  if (file.size > MAX_ZIP_BYTES) return NextResponse.json({ error: "ZIP files must be 200 MB or smaller." }, { status: 413 });
 
   try {
     await checkStorageAccess();
