@@ -24,8 +24,10 @@ function parsePublishedAt(value: string | null): Date | null | { error: string }
 async function revalidateChapters(mangaId: string) {
   const manga = await prisma.manga.findUnique({ where: { id: mangaId }, select: { slug: true } });
   revalidatePath(`/admin/manga/${mangaId}/chapters`);
+  revalidatePath(`/admin/manga/${mangaId}/edit`);
   revalidatePath("/admin/manga");
-  if (manga) revalidatePath(`/manga/${manga.slug}`);
+  if (manga) revalidatePath(`/manga/${manga.slug}`, "layout");
+  revalidatePath("/");
 }
 
 export async function createChapter(mangaId: string, input: ChapterFormData): Promise<ActionResult<{ id: string }>> {

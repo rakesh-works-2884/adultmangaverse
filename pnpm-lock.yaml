@@ -14,6 +14,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.6.0
         version: 1.6.0(@types/react@19.2.17)(date-fns@4.4.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@napi-rs/canvas':
+        specifier: 0.1.100
+        version: 0.1.100
       '@node-rs/argon2':
         specifier: ^2.0.2
         version: 2.0.2
@@ -5206,7 +5209,6 @@ snapshots:
       '@napi-rs/canvas-linux-x64-musl': 0.1.100
       '@napi-rs/canvas-win32-arm64-msvc': 0.1.100
       '@napi-rs/canvas-win32-x64-msvc': 0.1.100
-    optional: true
 
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:

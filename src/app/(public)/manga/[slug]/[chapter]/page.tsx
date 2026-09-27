@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ReaderView } from "@/components/public/ReaderView";
 import { buildMetadata, chapterJsonLd, breadcrumbJsonLd } from "@/lib/seo";
@@ -49,7 +49,14 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
   const now = new Date();
 
   const manga = await getMangaBySlug(slug);
-  if (!manga) notFound();
+  if (!manga) {
+    const moved = await prisma.slugRedirect.findUnique({
+      where: { entity_oldSlug: { entity: "manga", oldSlug: slug } },
+      select: { newSlug: true },
+    });
+    if (moved) permanentRedirect(`/manga/${moved.newSlug}/${chapter}`);
+    notFound();
+  }
 
   // Both depend only on manga.id, not on each other.
   const [chap, all] = await Promise.all([

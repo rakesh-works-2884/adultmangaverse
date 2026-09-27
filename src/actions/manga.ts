@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth-guards";
 import { mangaSchema } from "@/lib/validators";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import { processCover, processHeroDesktop, processHeroMobile } from "@/lib/images";
-import { storage, keyFromUrl } from "@/lib/storage";
+import { storage, keyFromUrl, StorageError } from "@/lib/storage";
 import { sanitizeRichText } from "@/lib/sanitize";
 import { isUniqueViolation, type ActionResult } from "@/lib/actions";
 import type { Prisma } from "@/generated/prisma/client";
@@ -84,7 +84,7 @@ async function saveHeroMobile(file: File, slug: string): Promise<string> {
 
 function revalidateManga(slug: string) {
   revalidatePath("/admin/manga");
-  revalidatePath(`/manga/${slug}`);
+  revalidatePath(`/manga/${slug}`, "layout");
   revalidatePath("/");
 }
 
@@ -151,7 +151,7 @@ export async function createManga(fd: FormData): Promise<ActionResult<{ id: stri
   } catch (e) {
     if (isUniqueViolation(e)) return { ok: false, error: "A manga with this slug already exists." };
     console.error("[MANGA] create failed:", e);
-    return { ok: false, error: e instanceof Error ? e.message : "Could not create manga." };
+    return { ok: false, error: e instanceof StorageError ? e.message : "Could not create manga. Check the fields and uploaded images, then retry." };
   }
 }
 
@@ -175,13 +175,6 @@ export async function updateManga(id: string, fd: FormData): Promise<ActionResul
       slug = await uniqueSlug(desired, async (s) => {
         return (await prisma.manga.count({ where: { slug: s, id: { not: id } } })) > 0;
       });
-      if (slug !== existing.slug) {
-        await prisma.slugRedirect.upsert({
-          where: { entity_oldSlug: { entity: "manga", oldSlug: existing.slug } },
-          update: { newSlug: slug },
-          create: { entity: "manga", oldSlug: existing.slug, newSlug: slug },
-        });
-      }
     }
 
     // Cover + hero posters: replace only if a new file was uploaded, and
@@ -193,11 +186,6 @@ export async function updateManga(id: string, fd: FormData): Promise<ActionResul
       cover instanceof File && cover.size > 0 ? saveCover(cover, slug) : Promise.resolve(existing.coverUrl),
       heroDesktop instanceof File && heroDesktop.size > 0 ? saveHeroDesktop(heroDesktop, slug) : Promise.resolve(existing.heroImageDesktop),
       heroMobile instanceof File && heroMobile.size > 0 ? saveHeroMobile(heroMobile, slug) : Promise.resolve(existing.heroImageMobile),
-    ]);
-    await Promise.all([
-      coverUrl !== existing.coverUrl && existing.coverUrl ? storage.remove(keyFromUrl(existing.coverUrl) ?? "", "public") : null,
-      heroImageDesktop !== existing.heroImageDesktop && existing.heroImageDesktop ? storage.remove(keyFromUrl(existing.heroImageDesktop) ?? "", "public") : null,
-      heroImageMobile !== existing.heroImageMobile && existing.heroImageMobile ? storage.remove(keyFromUrl(existing.heroImageMobile) ?? "", "public") : null,
     ]);
 
     // First time being featured (wasn't already) starts the FIFO clock;
@@ -238,15 +226,37 @@ export async function updateManga(id: string, fd: FormData): Promise<ActionResul
         },
       });
       if (newlyFeatured) await enforceFeaturedCap(tx, id);
+      if (slug !== existing.slug) {
+        // Keep redirects atomic with the edit and flatten earlier renames.
+        await tx.slugRedirect.deleteMany({ where: { entity: "manga", oldSlug: slug } });
+        await tx.slugRedirect.updateMany({ where: { entity: "manga", newSlug: existing.slug }, data: { newSlug: slug } });
+        await tx.slugRedirect.upsert({
+          where: { entity_oldSlug: { entity: "manga", oldSlug: existing.slug } },
+          update: { newSlug: slug },
+          create: { entity: "manga", oldSlug: existing.slug, newSlug: slug },
+        });
+      }
     });
 
+    // Never delete the existing artwork until the replacement has committed.
+    // Cleanup failure must not turn a successful save into a reported failure.
+    await Promise.allSettled([
+      [existing.coverUrl, coverUrl],
+      [existing.heroImageDesktop, heroImageDesktop],
+      [existing.heroImageMobile, heroImageMobile],
+    ].map(async ([before, after]) => {
+      const key = before && before !== after ? keyFromUrl(before) : null;
+      if (key) await storage.remove(key, "public");
+    }));
+
     revalidateManga(slug);
-    if (existing.slug !== slug) revalidatePath(`/manga/${existing.slug}`);
+    revalidatePath(`/admin/manga/${id}/edit`);
+    if (existing.slug !== slug) revalidatePath(`/manga/${existing.slug}`, "layout");
     return { ok: true, data: { slug } };
   } catch (e) {
     if (isUniqueViolation(e)) return { ok: false, error: "A manga with this slug already exists." };
     console.error("[MANGA] update failed:", e);
-    return { ok: false, error: e instanceof Error ? e.message : "Could not update manga." };
+    return { ok: false, error: e instanceof StorageError ? e.message : "Could not update manga. Check the fields and uploaded images, then retry." };
   }
 }
 

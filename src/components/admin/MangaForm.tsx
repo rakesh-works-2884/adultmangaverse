@@ -127,24 +127,25 @@ export function MangaForm({ mode, genres, initial }: Props) {
     fd.set("synopsis", synopsis);
 
     startTransition(async () => {
-      const res =
-        mode === "create"
-          ? await createManga(fd)
-          : await updateManga(initial!.id, fd);
-      if (!res.ok) {
-        setError(res.error);
+      try {
+        const res = mode === "create" ? await createManga(fd) : await updateManga(initial!.id, fd);
+        if (!res.ok) {
+          setError(res.error);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
+        if (mode === "create") {
+          const created = res.data as { id?: string } | undefined;
+          router.push(created?.id ? `/admin/manga/${created.id}/edit` : "/admin/manga");
+          return;
+        }
+        setSaved(true);
+        router.refresh();
         window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
+      } catch {
+        setError("The save request could not complete. Your edits are still here. Please retry; if the site was just updated, copy your edits before reloading this page.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
-      if (mode === "create") {
-        // Go straight to the editor so chapters/pages can be added in one place.
-        const created = res.data as { id?: string } | undefined;
-        router.push(created?.id ? `/admin/manga/${created.id}/edit` : "/admin/manga");
-        return;
-      }
-      setSaved(true);
-      router.refresh();
-      window.scrollTo({ top: 0, behavior: "smooth" });
     });
   }
 

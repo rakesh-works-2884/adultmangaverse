@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireStaff } from "@/lib/auth-guards";
-import { pdf } from "pdf-to-img";
 import { processChapterPage, processChapterPageBuffer } from "@/lib/images";
 import { storage } from "@/lib/storage";
 import { signPageUrl } from "@/lib/image-urls";
@@ -79,6 +78,9 @@ export async function uploadChapterPdf(chapterId: string, fd: FormData): Promise
     if (!chapter) return { ok: false, error: "Chapter not found." };
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    // Loading PDF.js at module scope breaks every action on the editor when
+    // its native canvas dependency is unavailable, even text-only manga saves.
+    const { pdf } = await import("pdf-to-img");
     const doc = await pdf(buffer, { scale: 2 });
     if (doc.length === 0) return { ok: false, error: "That PDF has no pages." };
 
